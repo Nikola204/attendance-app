@@ -4,13 +4,11 @@ plugins {
 
 android {
     namespace 'com.example.studentqrscanner'
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.example.studentqrscanner"
-        minSdk 33
+        minSdk 26
         targetSdk 36
         versionCode 1
         versionName "1.0"
@@ -35,6 +33,13 @@ dependencies {
     implementation libs.material
     implementation libs.activity
     implementation libs.constraintlayout
+
+    // Supabase
+    implementation libs.supabase.gotrue
+    implementation libs.supabase.postgrest
+    implementation libs.ktor.client.android
+    implementation libs.gson
+
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

@@ -1,3 +1,16 @@
 <resources>
-    <string name="app_name">StudentQRScanner</string>
+    <string name="app_name">Attendance App</string>
+    <string name="login_title">Prijava</string>
+    <string name="email_hint">Email (@fsre.sum.ba)</string>
+    <string name="password_hint">Lozinka</string>
+    <string name="login_button">Prijavi se</string>
+    <string name="logout_button">Odjavi se</string>
+    <string name="welcome_message">Dobrodošli u Attendance App</string>
+    <string name="email_required">Email je obavezan</string>
+    <string name="password_required">Lozinka je obavezna</string>
+    <string name="invalid_email">Unesite validan email</string>
+    <string name="invalid_domain">Email mora biti sa domene fsre.sum.ba</string>
+    <string name="password_min_length">Lozinka mora imati najmanje 6 karaktera</string>
+    <string name="login_success">Uspješna prijava!</string>
+    <string name="login_error">Greška pri prijavi</string>
 </resources>
