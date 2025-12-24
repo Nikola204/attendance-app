@@ -2,9 +2,12 @@ package com.example.studentqrscanner.config;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Base64;
 
-import com.example.studentqrscanner.model.User;
-import com.example.studentqrscanner.model.UserRole;
+import com.example.studentqrscanner.model.BaseUser;
+import com.example.studentqrscanner.model.Student;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -19,11 +22,11 @@ import org.json.JSONObject;
 
 public class SupabaseClient {
 
-    private static final String SUPABASE_URL = "https://ovopwcqzcpnizulssxhg.supabase.co";
-    private static final String SUPABASE_ANON_KEY = "sb_publishable_d0opedPHgM-tg5FjJDkBcA_4-ZtWr8W";
+    private static final String SUPABASE_URL = "https://gjksdicomuuxrxqurqqu.supabase.co";
+    private static final String SUPABASE_ANON_KEY = "sb_publishable_cvBUkg_yYjkpRdf5D2VErg_KZ3fnj7V";
 
     private static final String AUTH_ENDPOINT = SUPABASE_URL + "/auth/v1/token?grant_type=password";
-    private static final String USER_ENDPOINT = SUPABASE_URL + "/rest/v1/users";
+    private static final String STUDENTI_ENDPOINT = SUPABASE_URL + "/rest/v1/studenti";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Context context;
@@ -33,10 +36,23 @@ public class SupabaseClient {
     }
 
     public interface AuthCallback {
-        void onSuccess(User user);
+        void onSuccess(BaseUser user);
 
         void onError(String error);
     }
+
+    private void postSuccess(AuthCallback callback, BaseUser user) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            callback.onSuccess(user);
+        });
+    }
+
+    private void postError(AuthCallback callback, String error) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            callback.onError(error);
+        });
+    }
+
 
     /**
      * Login korisnika sa email i password
@@ -79,13 +95,12 @@ public class SupabaseClient {
                 if (responseCode >= 200 && responseCode < 300) {
                     JSONObject authResponse = new JSONObject(response.toString());
                     String accessToken = authResponse.getString("access_token");
-                    String userId = authResponse.getJSONObject("user").getString("id");
 
                     // Spremi token
                     saveAccessToken(accessToken);
 
                     // 2. Dohvati user podatke iz custom users tabele
-                    getUserProfile(userId, email, accessToken, callback);
+                    getUserProfile(accessToken, callback);
                 } else {
                     JSONObject errorResponse = new JSONObject(response.toString());
                     String errorMsg = errorResponse.optString("error_description", "Greška pri loginu");
@@ -98,18 +113,30 @@ public class SupabaseClient {
         });
     }
 
+    private String getUserIdFromAccessToken(String accessToken) throws Exception {
+        String[] parts = accessToken.split("\\.");
+        String payload = new String(Base64.decode(parts[1], Base64.URL_SAFE));
+        JSONObject json = new JSONObject(payload);
+        return json.getString("sub"); // THIS IS THE UID
+    }
+
     /**
      * Dohvati user profil iz custom users tabele
      */
-    private void getUserProfile(String userId, String email, String accessToken, AuthCallback callback) {
+    private void getUserProfile(String accessToken, AuthCallback callback) {
         try {
-            URL url = new URL(USER_ENDPOINT + "?id=eq." + userId);
+            String userId = getUserIdFromAccessToken(accessToken);
+
+            URL url = new URL(STUDENTI_ENDPOINT + "?user_id=eq." + userId);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
             conn.setRequestProperty("Authorization", "Bearer " + accessToken);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream())
+            );
+
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -117,34 +144,26 @@ public class SupabaseClient {
             }
             reader.close();
 
-            // Parse response
             String responseStr = response.toString();
+
             if (responseStr.startsWith("[") && responseStr.length() > 2) {
-                // Ukloni [ i ]
                 responseStr = responseStr.substring(1, responseStr.length() - 1);
-                JSONObject userJson = new JSONObject(responseStr);
+                JSONObject j = new JSONObject(responseStr);
 
-                User user = new User();
-                user.setId(userJson.getString("id"));
-                user.setEmail(userJson.getString("email"));
-                user.setFullName(userJson.optString("full_name", ""));
+                Student student = new Student();
+                student.setIme(j.getString("ime"));
+                student.setPrezime(j.getString("prezime"));
+                student.setBrojIndexa(j.getString("broj_index"));
+                student.setStudij(j.getString("studij"));
+                student.setGodina(j.getInt("godina"));
 
-                String roleStr = userJson.getString("role");
-                UserRole role = UserRole.fromString(roleStr);
-
-                if (role == null) {
-                    callback.onError("Nevažeća user role");
-                    return;
-                }
-
-                user.setRole(role);
-                callback.onSuccess(user);
+                postSuccess(callback, student);
             } else {
-                callback.onError("User profil nije pronađen");
+                postError(callback, "Student nije pronađen");
             }
 
         } catch (Exception e) {
-            callback.onError("Greška pri dohvaćanju profila: " + e.getMessage());
+            postError(callback, "Greška pri dohvaćanju profila: " + e.getMessage());
         }
     }
 

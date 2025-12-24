@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.studentqrscanner.MainActivity;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.config.SupabaseClient;
-import com.example.studentqrscanner.model.User;
+import com.example.studentqrscanner.model.BaseUser;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -76,7 +76,7 @@ public class LoginActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(password)) {
             etPassword.setError("Lozinka je obavezna");
             hasError = true;
-        } else if (password.length() < 6) {
+        } else if (password.length() < 4) {
             etPassword.setError("Lozinka mora imati najmanje 6 karaktera");
             hasError = true;
         }
@@ -97,7 +97,7 @@ public class LoginActivity extends AppCompatActivity {
 
         supabaseClient.signInWithEmail(email, password, new SupabaseClient.AuthCallback() {
             @Override
-            public void onSuccess(User user) {
+            public void onSuccess(BaseUser user) {
                 runOnUiThread(() -> {
                     showLoading(false);
                     Toast.makeText(LoginActivity.this,
