@@ -84,6 +84,7 @@ public class StudentProfileFragment extends Fragment {
             public void onError(String error) {
                 if (!isAdded()) return;
                 showLoading(false);
+                supabaseClient.signOut();
                 Toast.makeText(requireContext(),
                         "Greska pri dohvatanju profila: " + error,
                         Toast.LENGTH_LONG).show();

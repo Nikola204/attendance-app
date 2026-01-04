@@ -47,17 +47,21 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Pokusaj logina
+     * Pokušaj logina
      */
     private void attemptLogin() {
+        // Reset errors
         etEmail.setError(null);
         etPassword.setError(null);
 
+        // Dohvati vrijednosti
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
+        // Validacija
         boolean hasError = false;
 
+        // Provjeri jesu li polja prazna
         if (TextUtils.isEmpty(email)) {
             etEmail.setError("Email je obavezan");
             hasError = true;
@@ -85,7 +89,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Izvrsi login preko Supabase-a
+     * Izvrši login preko Supabase-a
      */
     private void performLogin(String email, String password) {
         showLoading(true);
@@ -125,7 +129,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Prikazi/sakrij loading indicator
+     * Prikaži/sakrij loading indicator
      */
     private void showLoading(boolean show) {
         if (show) {

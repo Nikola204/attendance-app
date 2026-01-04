@@ -63,6 +63,7 @@ public class SupabaseClient {
     public void signInWithEmail(String email, String password, AuthCallback callback) {
         executor.execute(() -> {
             try {
+                // 1. Autentifikacija sa Supabase auth
                 JSONObject authPayload = new JSONObject();
                 authPayload.put("email", email);
                 authPayload.put("password", password);
@@ -98,7 +99,10 @@ public class SupabaseClient {
                     JSONObject authResponse = new JSONObject(response.toString());
                     String accessToken = authResponse.getString("access_token");
 
+                    // Spremi token
                     saveAccessToken(accessToken);
+
+                    // 2. Dohvati user podatke iz custom users tablice
                     getUserProfile(accessToken, callback);
                 } else {
                     JSONObject errorResponse = new JSONObject(response.toString());
@@ -156,11 +160,13 @@ public class SupabaseClient {
 
                 postSuccess(callback, student);
             } else {
-                postError(callback, "Student nije pronadjen");
+                signOut();
+                postError(callback, "Student nije pronađen");
             }
 
         } catch (Exception e) {
-            postError(callback, "Greska pri dohvatanju profila: " + e.getMessage());
+            signOut();
+            postError(callback, "Greska pri dohvaćanju profila: " + e.getMessage());
         }
     }
 
@@ -173,7 +179,7 @@ public class SupabaseClient {
     }
 
     /**
-     * Dohvati profil trenutnog korisnika koristeci spremljeni token
+     * Dohvati profil trenutnog korisnika koristeći spremljeni token
      */
     public void fetchCurrentUser(AuthCallback callback) {
         executor.execute(() -> {
@@ -187,7 +193,7 @@ public class SupabaseClient {
     }
 
     /**
-     * Provjeri da li je korisnik prijavljen
+     * Provjeri je li korisnik prijavljen
      */
     public boolean isLoggedIn() {
         return getAccessToken() != null;
