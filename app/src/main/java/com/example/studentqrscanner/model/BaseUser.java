@@ -12,5 +12,13 @@ public abstract class BaseUser {
         return role;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
     public abstract String getFullName();
 }
