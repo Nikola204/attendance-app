@@ -42,17 +42,20 @@ public class SupabaseClient {
     }
 
     private void postSuccess(AuthCallback callback, BaseUser user) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            callback.onSuccess(user);
-        });
+        new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(user));
     }
 
     private void postError(AuthCallback callback, String error) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            callback.onError(error);
-        });
+        new Handler(Looper.getMainLooper()).post(() -> callback.onError(error));
     }
 
+    /**
+     * Dohvati spremljeni access token ili null
+     */
+    private String getAccessToken() {
+        SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
+        return prefs.getString("access_token", null);
+    }
 
     /**
      * Login korisnika sa email i password
@@ -60,7 +63,7 @@ public class SupabaseClient {
     public void signInWithEmail(String email, String password, AuthCallback callback) {
         executor.execute(() -> {
             try {
-                // 1. Autentifikacija sa Supabase Auth
+                // 1. Autentifikacija sa Supabase auth
                 JSONObject authPayload = new JSONObject();
                 authPayload.put("email", email);
                 authPayload.put("password", password);
@@ -99,16 +102,16 @@ public class SupabaseClient {
                     // Spremi token
                     saveAccessToken(accessToken);
 
-                    // 2. Dohvati user podatke iz custom users tabele
+                    // 2. Dohvati user podatke iz custom users tablice
                     getUserProfile(accessToken, callback);
                 } else {
                     JSONObject errorResponse = new JSONObject(response.toString());
-                    String errorMsg = errorResponse.optString("error_description", "Greška pri loginu");
-                    callback.onError(errorMsg);
+                    String errorMsg = errorResponse.optString("error_description", "Greska pri loginu");
+                    postError(callback, errorMsg);
                 }
 
             } catch (Exception e) {
-                callback.onError("Greška pri konekciji: " + e.getMessage());
+                postError(callback, "Greska pri konekciji: " + e.getMessage());
             }
         });
     }
@@ -117,7 +120,7 @@ public class SupabaseClient {
         String[] parts = accessToken.split("\\.");
         String payload = new String(Base64.decode(parts[1], Base64.URL_SAFE));
         JSONObject json = new JSONObject(payload);
-        return json.getString("sub"); // THIS IS THE UID
+        return json.getString("sub"); // user id
     }
 
     /**
@@ -126,16 +129,13 @@ public class SupabaseClient {
     private void getUserProfile(String accessToken, AuthCallback callback) {
         try {
             String userId = getUserIdFromAccessToken(accessToken);
-
-            URL url = new URL(STUDENTI_ENDPOINT + "?user_id=eq." + userId);
+            URL url = new URL(STUDENTI_ENDPOINT + "?id=eq." + userId);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
             conn.setRequestProperty("Authorization", "Bearer " + accessToken);
 
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream())
-            );
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 
             StringBuilder response = new StringBuilder();
             String line;
@@ -151,19 +151,22 @@ public class SupabaseClient {
                 JSONObject j = new JSONObject(responseStr);
 
                 Student student = new Student();
+                student.setEmail(j.optString("email", null));
                 student.setIme(j.getString("ime"));
                 student.setPrezime(j.getString("prezime"));
-                student.setBrojIndexa(j.getString("broj_index"));
+                student.setBrojIndexa(j.getString("broj_indexa"));
                 student.setStudij(j.getString("studij"));
                 student.setGodina(j.getInt("godina"));
 
                 postSuccess(callback, student);
             } else {
+                signOut();
                 postError(callback, "Student nije pronađen");
             }
 
         } catch (Exception e) {
-            postError(callback, "Greška pri dohvaćanju profila: " + e.getMessage());
+            signOut();
+            postError(callback, "Greska pri dohvaćanju profila: " + e.getMessage());
         }
     }
 
@@ -176,11 +179,24 @@ public class SupabaseClient {
     }
 
     /**
-     * Provjeri da li je korisnik prijavljen
+     * Dohvati profil trenutnog korisnika koristeći spremljeni token
+     */
+    public void fetchCurrentUser(AuthCallback callback) {
+        executor.execute(() -> {
+            String accessToken = getAccessToken();
+            if (accessToken == null) {
+                postError(callback, "Korisnik nije prijavljen");
+                return;
+            }
+            getUserProfile(accessToken, callback);
+        });
+    }
+
+    /**
+     * Provjeri je li korisnik prijavljen
      */
     public boolean isLoggedIn() {
-        SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
-        return prefs.getString("access_token", null) != null;
+        return getAccessToken() != null;
     }
 
     /**

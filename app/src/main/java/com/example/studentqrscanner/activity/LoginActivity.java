@@ -12,10 +12,10 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.studentqrscanner.MainActivity;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
+import com.example.studentqrscanner.activity.StudentHomeActivity;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -39,7 +39,7 @@ public class LoginActivity extends AppCompatActivity {
         supabaseClient = new SupabaseClient(this);
 
         if (supabaseClient.isLoggedIn()) {
-            navigateToMainActivity();
+            navigateToHome();
             return;
         }
 
@@ -61,7 +61,7 @@ public class LoginActivity extends AppCompatActivity {
         // Validacija
         boolean hasError = false;
 
-        // Provjeri da li su polja prazna
+        // Provjeri jesu li polja prazna
         if (TextUtils.isEmpty(email)) {
             etEmail.setError("Email je obavezan");
             hasError = true;
@@ -76,8 +76,8 @@ public class LoginActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(password)) {
             etPassword.setError("Lozinka je obavezna");
             hasError = true;
-        } else if (password.length() < 4) {
-            etPassword.setError("Lozinka mora imati najmanje 6 karaktera");
+        } else if (password.length() < 3) {
+            etPassword.setError("Lozinka mora imati najmanje 3 karaktera");
             hasError = true;
         }
 
@@ -85,7 +85,6 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // Pokreni login
         performLogin(email, password);
     }
 
@@ -98,23 +97,19 @@ public class LoginActivity extends AppCompatActivity {
         supabaseClient.signInWithEmail(email, password, new SupabaseClient.AuthCallback() {
             @Override
             public void onSuccess(BaseUser user) {
-                runOnUiThread(() -> {
-                    showLoading(false);
-                    Toast.makeText(LoginActivity.this,
-                            "Dobrodošli, " + user.getFullName() + " (" + user.getRole().getValue() + ")",
-                            Toast.LENGTH_LONG).show();
-                    navigateToMainActivity();
-                });
+                showLoading(false);
+                Toast.makeText(LoginActivity.this,
+                        "Dobrodosli, " + user.getFullName() + " (" + user.getRole().getValue() + ")",
+                        Toast.LENGTH_LONG).show();
+                navigateToHome();
             }
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> {
-                    showLoading(false);
-                    Toast.makeText(LoginActivity.this,
-                            "Greška: " + error,
-                            Toast.LENGTH_LONG).show();
-                });
+                showLoading(false);
+                Toast.makeText(LoginActivity.this,
+                        "Greska: " + error,
+                        Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -151,10 +146,10 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Navigiraj na glavni ekran
+     * Navigiraj na profil studenta
      */
-    private void navigateToMainActivity() {
-        Intent intent = new Intent(this, MainActivity.class);
+    private void navigateToHome() {
+        Intent intent = new Intent(this, StudentHomeActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottomNavRoot"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:background="@android:color/white"
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="12dp"
+    android:elevation="4dp">
+
+    <LinearLayout
+        android:id="@+id/navAnalytics"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/iconAnalytics"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_analytics"
+            android:tint="#1976D2" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navScan"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/iconScan"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_qr_square"
+            android:tint="#1976D2" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navProfile"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/iconProfile"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_profile"
+            android:tint="#1976D2" />
+    </LinearLayout>
+
+</LinearLayout>
