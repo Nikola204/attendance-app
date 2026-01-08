@@ -7,7 +7,9 @@ import android.os.Looper;
 import android.util.Base64;
 
 import com.example.studentqrscanner.model.BaseUser;
+import com.example.studentqrscanner.model.Profesor;
 import com.example.studentqrscanner.model.Student;
+import com.example.studentqrscanner.model.UserRole;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -27,6 +29,8 @@ public class SupabaseClient {
 
     private static final String AUTH_ENDPOINT = SUPABASE_URL + "/auth/v1/token?grant_type=password";
     private static final String STUDENTI_ENDPOINT = SUPABASE_URL + "/rest/v1/studenti";
+
+    private static final String PROFESORI_ENDPOINT = SUPABASE_URL + "/rest/v1/profesori";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Context context;
@@ -127,49 +131,48 @@ public class SupabaseClient {
      * Dohvati user profil iz custom users tabele
      */
     private void getUserProfile(String accessToken, AuthCallback callback) {
-        try {
-            String userId = getUserIdFromAccessToken(accessToken);
-            URL url = new URL(STUDENTI_ENDPOINT + "?id=eq." + userId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
-            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+        executor.execute(() -> {
+            try {
+                String userId = getUserIdFromAccessToken(accessToken);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String studentData = fetchDataFromTable(STUDENTI_ENDPOINT, userId, accessToken);
 
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
+                if (studentData != null) {
+                    JSONObject j = new JSONObject(studentData);
+                    Student student = new Student();
+                    student.setEmail(j.optString("email", ""));
+                    student.setIme(j.getString("ime"));
+                    student.setPrezime(j.getString("prezime"));
+                    student.setBrojIndexa(j.optString("broj_indexa", ""));
+                    student.setStudij(j.optString("studij", ""));
+                    student.setGodina(j.optInt("godina", 0));
+                    student.setRole(UserRole.STUDENT);
+                    postSuccess(callback, student);
+                    return;
+                }
 
-            String responseStr = response.toString();
+                String profData = fetchDataFromTable(PROFESORI_ENDPOINT, userId, accessToken);
 
-            if (responseStr.startsWith("[") && responseStr.length() > 2) {
-                responseStr = responseStr.substring(1, responseStr.length() - 1);
-                JSONObject j = new JSONObject(responseStr);
+                if (profData != null) {
+                    JSONObject j = new JSONObject(profData);
+                    Profesor professor = new Profesor();
+                    professor.setEmail(j.optString("mail", ""));
+                    professor.setIme(j.getString("ime"));
+                    professor.setPrezime(j.getString("prezime"));
+                    professor.setRole(UserRole.PROFESOR);
+                    postSuccess(callback, professor);
+                    return;
+                }
 
-                Student student = new Student();
-                student.setEmail(j.optString("email", null));
-                student.setIme(j.getString("ime"));
-                student.setPrezime(j.getString("prezime"));
-                student.setBrojIndexa(j.getString("broj_indexa"));
-                student.setStudij(j.getString("studij"));
-                student.setGodina(j.getInt("godina"));
-
-                postSuccess(callback, student);
-            } else {
                 signOut();
-                postError(callback, "Student nije pronađen");
+                postError(callback, "Korisnički podaci nisu pronađeni.");
+
+            } catch (Exception e) {
+                signOut();
+                postError(callback, "Greška pri dohvaćanju profila: " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            signOut();
-            postError(callback, "Greska pri dohvaćanju profila: " + e.getMessage());
-        }
+        });
     }
-
     /**
      * Logout
      */
@@ -205,5 +208,29 @@ public class SupabaseClient {
     private void saveAccessToken(String token) {
         SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
         prefs.edit().putString("access_token", token).apply();
+    }
+
+    private String fetchDataFromTable(String endpoint, String userId, String accessToken) throws Exception {
+        URL url = new URL(endpoint + "?id=eq." + userId);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+        conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+        if (conn.getResponseCode() == 200) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            reader.close();
+
+            String res = response.toString();
+            if (res.startsWith("[") && res.length() > 2) {
+                return res.substring(1, res.length() - 1);
+            }
+        }
+        return null;
     }
 }

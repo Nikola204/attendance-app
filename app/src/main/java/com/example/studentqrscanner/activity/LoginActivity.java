@@ -15,7 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
-import com.example.studentqrscanner.activity.StudentHomeActivity;
+import com.example.studentqrscanner.model.UserRole;
+import com.example.studentqrscanner.model.Profesor;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -39,29 +40,38 @@ public class LoginActivity extends AppCompatActivity {
         supabaseClient = new SupabaseClient(this);
 
         if (supabaseClient.isLoggedIn()) {
-            navigateToHome();
+            checkUserRoleAndNavigate();
             return;
         }
 
         btnLogin.setOnClickListener(v -> attemptLogin());
     }
 
-    /**
-     * Pokušaj logina
-     */
+    private void checkUserRoleAndNavigate() {
+        showLoading(true);
+        supabaseClient.fetchCurrentUser(new SupabaseClient.AuthCallback() {
+            @Override
+            public void onSuccess(BaseUser user) {
+                showLoading(false);
+                handleNavigation(user);
+            }
+
+            @Override
+            public void onError(String error) {
+                showLoading(false);
+            }
+        });
+    }
+
     private void attemptLogin() {
-        // Reset errors
         etEmail.setError(null);
         etPassword.setError(null);
 
-        // Dohvati vrijednosti
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
-        // Validacija
         boolean hasError = false;
 
-        // Provjeri jesu li polja prazna
         if (TextUtils.isEmpty(email)) {
             etEmail.setError("Email je obavezan");
             hasError = true;
@@ -81,77 +91,52 @@ public class LoginActivity extends AppCompatActivity {
             hasError = true;
         }
 
-        if (hasError) {
-            return;
-        }
+        if (hasError) return;
 
         performLogin(email, password);
     }
 
-    /**
-     * Izvrši login preko Supabase-a
-     */
     private void performLogin(String email, String password) {
         showLoading(true);
-
         supabaseClient.signInWithEmail(email, password, new SupabaseClient.AuthCallback() {
             @Override
             public void onSuccess(BaseUser user) {
                 showLoading(false);
-                Toast.makeText(LoginActivity.this,
-                        "Dobrodosli, " + user.getFullName() + " (" + user.getRole().getValue() + ")",
-                        Toast.LENGTH_LONG).show();
-                navigateToHome();
+                handleNavigation(user);
             }
 
             @Override
             public void onError(String error) {
                 showLoading(false);
-                Toast.makeText(LoginActivity.this,
-                        "Greska: " + error,
-                        Toast.LENGTH_LONG).show();
+                Toast.makeText(LoginActivity.this, "Greska: " + error, Toast.LENGTH_LONG).show();
             }
         });
     }
 
-    /**
-     * Provjeri email
-     */
+    private void handleNavigation(BaseUser user) {
+        Intent intent;
+        if (user instanceof Profesor || user.getRole() == UserRole.PROFESOR) {
+            intent = new Intent(this, ProfesorHomeActivity.class);
+        } else {
+            intent = new Intent(this, StudentHomeActivity.class);
+        }
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
     private boolean isValidEmail(String email) {
         return Patterns.EMAIL_ADDRESS.matcher(email).matches();
     }
 
-    /**
-     * Provjeri domenu
-     */
     private boolean isEmailDomainValid(String email) {
         return email.toLowerCase().endsWith(REQUIRED_EMAIL_DOMAIN);
     }
 
-    /**
-     * Prikaži/sakrij loading indicator
-     */
     private void showLoading(boolean show) {
-        if (show) {
-            progressBar.setVisibility(View.VISIBLE);
-            btnLogin.setEnabled(false);
-            etEmail.setEnabled(false);
-            etPassword.setEnabled(false);
-        } else {
-            progressBar.setVisibility(View.GONE);
-            btnLogin.setEnabled(true);
-            etEmail.setEnabled(true);
-            etPassword.setEnabled(true);
-        }
-    }
-
-    /**
-     * Navigiraj na profil studenta
-     */
-    private void navigateToHome() {
-        Intent intent = new Intent(this, StudentHomeActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        btnLogin.setEnabled(!show);
+        etEmail.setEnabled(!show);
+        etPassword.setEnabled(!show);
     }
 }
