@@ -1,11 +1,14 @@
 package com.example.studentqrscanner.fragment;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,6 +22,10 @@ import com.example.studentqrscanner.activity.LoginActivity;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.Student;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 
 public class StudentProfileFragment extends Fragment {
 
@@ -26,6 +33,7 @@ public class StudentProfileFragment extends Fragment {
     private TextView tvBrojIndexa;
     private TextView tvStudij;
     private TextView tvGodina;
+    private ImageView ivQrCode;
     private Button btnLogout;
     private ProgressBar progressBar;
 
@@ -44,6 +52,7 @@ public class StudentProfileFragment extends Fragment {
         tvBrojIndexa = view.findViewById(R.id.tvBrojIndexa);
         tvStudij = view.findViewById(R.id.tvStudij);
         tvGodina = view.findViewById(R.id.tvGodina);
+        ivQrCode = view.findViewById(R.id.ivQrCode);
         btnLogout = view.findViewById(R.id.btnLogout);
         progressBar = view.findViewById(R.id.progressBarProfile);
 
@@ -75,6 +84,9 @@ public class StudentProfileFragment extends Fragment {
                     tvBrojIndexa.setText(student.getBrojIndexa());
                     tvStudij.setText(student.getStudij());
                     tvGodina.setText(String.valueOf(student.getGodina()));
+
+                    // Generate and display QR code
+                    generateQrCode(student.getBrojIndexa());
                 } else {
                     Toast.makeText(requireContext(), "Profil nije dostupan.", Toast.LENGTH_LONG).show();
                 }
@@ -104,5 +116,35 @@ public class StudentProfileFragment extends Fragment {
     private void showLoading(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         btnLogout.setEnabled(!show);
+    }
+
+    /**
+     * Generiranje QR koda na osnovu broja indexa
+     */
+    private void generateQrCode(String brojIndexa) {
+        if (brojIndexa == null || brojIndexa.isEmpty()) {
+            Toast.makeText(requireContext(), "Broj indexa nije dostupan", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(brojIndexa, BarcodeFormat.QR_CODE, 500, 500);
+
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+
+            ivQrCode.setImageBitmap(bitmap);
+        } catch (WriterException e) {
+            Toast.makeText(requireContext(), "Greška pri generisanju QR koda", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
     }
 }
