@@ -131,3 +131,19 @@ IMPLEMENTATION_CHECKLIST.md
 DOCS_INDEX.md
 CHANGELOG.md
 SQL_EXAMPLES.sql
+FEATURE_*.md
+*.md
+!docs/*.md
+
+# ============================================
+# Android Studio - Additional files
+# ============================================
+.idea/
+.idea/*
+.idea/ChatHistory_schema_v3.xml
+.idea/.gitignore
+.idea/compiler.xml
+.idea/misc.xml
+.idea/vcs.xml
+*.iws
+.idea/inspectionProfiles/
