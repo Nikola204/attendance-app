@@ -13,18 +13,18 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.fragment.AnalyticsFragment;
-import com.example.studentqrscanner.fragment.QrFragment;
+import com.example.studentqrscanner.fragment.CreateLectureFragment;
 import com.example.studentqrscanner.fragment.ProfesorProfileFragment;
 
 public class ProfesorHomeActivity extends AppCompatActivity {
 
     private static final int TAB_ANALYTICS = 0;
-    private static final int TAB_SCAN = 1;
+    private static final int TAB_CREATE = 1;
     private static final int TAB_PROFILE = 2;
 
     private SupabaseClient supabaseClient;
     private ImageView iconAnalytics;
-    private ImageView iconScan;
+    private ImageView iconCreateLecture;
     private ImageView iconProfile;
 
     @Override
@@ -48,15 +48,15 @@ public class ProfesorHomeActivity extends AppCompatActivity {
 
     private void setupBottomNav() {
         View navAnalytics = findViewById(R.id.navAnalytics);
-        View navScan = findViewById(R.id.navScan);
+        View navCreateLecture = findViewById(R.id.navCreateLecture);
         View navProfile = findViewById(R.id.navProfile);
 
         iconAnalytics = findViewById(R.id.iconAnalytics);
-        iconScan = findViewById(R.id.iconScan);
+        iconCreateLecture = findViewById(R.id.iconCreateLecture);
         iconProfile = findViewById(R.id.iconProfile);
 
         navAnalytics.setOnClickListener(v -> openTab(TAB_ANALYTICS));
-        navScan.setOnClickListener(v -> openTab(TAB_SCAN));
+        navCreateLecture.setOnClickListener(v -> openTab(TAB_CREATE));
         navProfile.setOnClickListener(v -> openTab(TAB_PROFILE));
     }
 
@@ -66,8 +66,8 @@ public class ProfesorHomeActivity extends AppCompatActivity {
             case TAB_ANALYTICS:
                 fragment = new AnalyticsFragment();
                 break;
-            case TAB_SCAN:
-                fragment = new QrFragment();
+            case TAB_CREATE:
+                fragment = new CreateLectureFragment();
                 break;
             case TAB_PROFILE:
             default:
@@ -84,7 +84,7 @@ public class ProfesorHomeActivity extends AppCompatActivity {
 
     private void setSelectedTab(int tab) {
         setIconState(iconAnalytics, tab == TAB_ANALYTICS);
-        setIconState(iconScan, tab == TAB_SCAN);
+        setIconState(iconCreateLecture, tab == TAB_CREATE);
         setIconState(iconProfile, tab == TAB_PROFILE);
     }
 

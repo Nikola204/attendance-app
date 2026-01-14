@@ -25,17 +25,17 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/navScan"
+        android:id="@+id/navCreateLecture"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:gravity="center"
         android:orientation="vertical">
         <ImageView
-            android:id="@+id/iconScan"
+            android:id="@+id/iconCreateLecture"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_qr_square"
+            android:src="@drawable/ic_add"
             android:tint="#1976D2" />
     </LinearLayout>
 

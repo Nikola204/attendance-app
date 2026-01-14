@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Novo predavanje"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#1976D2"
+            android:paddingBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ovdje ce biti forma za kreiranje novog predavanja. Trenutno je ovo samo placeholder ekran."
+            android:textSize="16sp"
+            android:textColor="#333333"
+            android:paddingBottom="20dp" />
+
+        <Button
+            android:id="@+id/btnCreateLecture"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp"
+            android:text="Otvori formu (uskoro)"
+            android:backgroundTint="#1976D2"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+</ScrollView>
