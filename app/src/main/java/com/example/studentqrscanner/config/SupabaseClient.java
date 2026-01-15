@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -47,6 +48,11 @@ public class SupabaseClient {
 
     public interface SimpleCallback {
         void onSuccess();
+        void onError(String error);
+    }
+
+    public interface KolegijiCallback {
+        void onSuccess(List<Kolegij> kolegiji);
         void onError(String error);
     }
 
@@ -202,6 +208,49 @@ public class SupabaseClient {
                     String line;
                     while ((line = br.readLine()) != null) err.append(line);
                     new Handler(Looper.getMainLooper()).post(() -> callback.onError("Baza kaze: " + err.toString()));
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
+            }
+        });
+    }
+
+    public void getKolegijiByProfesor(String profesorId, KolegijiCallback callback) {
+        executor.execute(() -> {
+            try {
+                URL url = new URL(KOLEGIJ_ENDPOINT + "?profesor_id=eq." + profesorId + "&select=*");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) response.append(line);
+                    reader.close();
+
+                    String jsonResponse = response.toString();
+
+                    java.util.List<Kolegij> listaKolegija = new java.util.ArrayList<>();
+                    org.json.JSONArray jsonArray = new org.json.JSONArray(jsonResponse);
+
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        org.json.JSONObject obj = jsonArray.getJSONObject(i);
+                        Kolegij k = new Kolegij(
+                                obj.getString("naziv"),
+                                obj.getInt("godina"),
+                                obj.getString("studij"),
+                                obj.getString("profesor_id")
+                        );
+                        listaKolegija.add(k);
+                    }
+
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(listaKolegija));
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onError("Greška: " + responseCode));
                 }
             } catch (Exception e) {
                 new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
