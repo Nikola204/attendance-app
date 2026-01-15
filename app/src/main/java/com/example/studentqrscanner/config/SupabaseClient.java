@@ -152,6 +152,9 @@ public class SupabaseClient {
                     student.setEmail(j.optString("email", ""));
                     student.setIme(j.getString("ime"));
                     student.setPrezime(j.getString("prezime"));
+                    student.setBrojIndexa(j.optString("broj_indexa", ""));
+                    student.setStudij(j.optString("studij", ""));
+                    student.setGodina(j.optInt("godina", 0));
                     student.setRole(UserRole.STUDENT);
                     postSuccess(callback, student);
                     return;
