@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -34,7 +33,6 @@ public class StudentProfileFragment extends Fragment {
     private TextView tvStudij;
     private TextView tvGodina;
     private ImageView ivQrCode;
-    private Button btnLogout;
     private ProgressBar progressBar;
 
     private SupabaseClient supabaseClient;
@@ -53,7 +51,7 @@ public class StudentProfileFragment extends Fragment {
         tvStudij = view.findViewById(R.id.tvStudij);
         tvGodina = view.findViewById(R.id.tvGodina);
         ivQrCode = view.findViewById(R.id.ivQrCode);
-        btnLogout = view.findViewById(R.id.btnLogout);
+        ivQrCode = view.findViewById(R.id.ivQrCode);
         progressBar = view.findViewById(R.id.progressBarProfile);
 
         supabaseClient = new SupabaseClient(requireContext());
@@ -63,10 +61,6 @@ public class StudentProfileFragment extends Fragment {
             return;
         }
 
-        btnLogout.setOnClickListener(v -> {
-            supabaseClient.signOut();
-            navigateToLogin();
-        });
 
         loadProfile();
     }
@@ -115,7 +109,6 @@ public class StudentProfileFragment extends Fragment {
 
     private void showLoading(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
-        btnLogout.setEnabled(!show);
     }
 
     /**

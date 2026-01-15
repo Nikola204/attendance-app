@@ -2,8 +2,11 @@ package com.example.studentqrscanner.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -39,6 +42,7 @@ public class ProfesorHomeActivity extends AppCompatActivity {
         }
 
         setupBottomNav();
+        setupTopNavbar();
         applyInsetsPadding();
 
         if (savedInstanceState == null) {
@@ -93,13 +97,46 @@ public class ProfesorHomeActivity extends AppCompatActivity {
         icon.setAlpha(selected ? 1f : 0.4f);
     }
 
+    private void setupTopNavbar() {
+        TextView tvLanguage = findViewById(R.id.tvLanguage);
+        ImageView btnMenu = findViewById(R.id.btnMenu);
+
+        tvLanguage.setOnClickListener(v -> {
+            String current = tvLanguage.getText().toString();
+            tvLanguage.setText(current.equals("EN") ? "HR" : "EN");
+        });
+
+        btnMenu.setOnClickListener(v -> showPopupMenu(v));
+    }
+
+    private void showPopupMenu(View view) {
+        PopupMenu popup = new PopupMenu(this, view);
+        popup.getMenuInflater().inflate(R.menu.top_nav_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_logout) {
+                supabaseClient.signOut();
+                navigateToLogin();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
     private void applyInsetsPadding() {
         View root = findViewById(R.id.rootContainer);
         View bottomNav = findViewById(R.id.bottomNavContainer);
+        View topNav = findViewById(R.id.topNavContainer);
+
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            int bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            androidx.core.graphics.Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
             bottomNav.setPadding(bottomNav.getPaddingLeft(), bottomNav.getPaddingTop(),
-                    bottomNav.getPaddingRight(), bottom);
+                    bottomNav.getPaddingRight(), systemBars.bottom);
+            
+            topNav.setPadding(topNav.getPaddingLeft(), systemBars.top,
+                    topNav.getPaddingRight(), topNav.getPaddingBottom());
+            
             return insets;
         });
     }
