@@ -13,7 +13,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.fragment.AnalyticsFragment;
-import com.example.studentqrscanner.fragment.CreateLectureFragment;
+import com.example.studentqrscanner.fragment.CreateClassFragment;
 import com.example.studentqrscanner.fragment.ProfesorProfileFragment;
 
 public class ProfesorHomeActivity extends AppCompatActivity {
@@ -67,7 +67,7 @@ public class ProfesorHomeActivity extends AppCompatActivity {
                 fragment = new AnalyticsFragment();
                 break;
             case TAB_CREATE:
-                fragment = new CreateLectureFragment();
+                fragment = new CreateClassFragment();
                 break;
             case TAB_PROFILE:
             default:

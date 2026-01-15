@@ -177,7 +177,7 @@ public class SupabaseClient {
             try {
                 JSONObject payload = new JSONObject();
                 payload.put("naziv", kolegij.getNaziv());
-                payload.put("godina", String.valueOf(kolegij.getGodina())); // String jer je varchar u bazi
+                payload.put("godina", String.valueOf(kolegij.getGodina()));
                 payload.put("studij", kolegij.getStudij());
                 payload.put("profesor_id", kolegij.getProfesorId());
 
