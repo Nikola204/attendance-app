@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,7 +23,6 @@ import com.example.studentqrscanner.model.Profesor;
 public class ProfesorProfileFragment extends Fragment {
 
     private TextView tvProfesorLastName;
-    private Button btnLogout;
     private ProgressBar progressBar;
     private SupabaseClient supabaseClient;
 
@@ -37,7 +36,6 @@ public class ProfesorProfileFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         tvProfesorLastName = view.findViewById(R.id.tvProfesorLastName);
-        btnLogout = view.findViewById(R.id.btnLogout);
         progressBar = view.findViewById(R.id.progressBarProfile);
 
         supabaseClient = new SupabaseClient(requireContext());
@@ -47,10 +45,6 @@ public class ProfesorProfileFragment extends Fragment {
             return;
         }
 
-        btnLogout.setOnClickListener(v -> {
-            supabaseClient.signOut();
-            navigateToLogin();
-        });
 
         loadProfile();
     }
@@ -89,6 +83,5 @@ public class ProfesorProfileFragment extends Fragment {
 
     private void showLoading(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
-        btnLogout.setEnabled(!show);
     }
 }
