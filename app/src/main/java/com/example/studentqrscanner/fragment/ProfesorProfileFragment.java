@@ -13,18 +13,27 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.LoginActivity;
+import com.example.studentqrscanner.adapter.KolegijAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
+import com.example.studentqrscanner.model.Kolegij;
 import com.example.studentqrscanner.model.Profesor;
+
+import java.util.List;
 
 public class ProfesorProfileFragment extends Fragment {
 
     private TextView tvProfesorLastName;
     private ProgressBar progressBar;
     private SupabaseClient supabaseClient;
+
+    private RecyclerView rvKolegiji;
+    private KolegijAdapter adapter;
 
     @Nullable
     @Override
@@ -38,6 +47,9 @@ public class ProfesorProfileFragment extends Fragment {
         tvProfesorLastName = view.findViewById(R.id.tvProfesorLastName);
         progressBar = view.findViewById(R.id.progressBarProfile);
 
+        rvKolegiji = view.findViewById(R.id.rvKolegiji);
+        rvKolegiji.setLayoutManager(new GridLayoutManager(requireContext(), 2));
+
         supabaseClient = new SupabaseClient(requireContext());
 
         if (!supabaseClient.isLoggedIn()) {
@@ -47,6 +59,7 @@ public class ProfesorProfileFragment extends Fragment {
 
 
         loadProfile();
+        loadKolegiji();
     }
 
     private void loadProfile() {
@@ -69,6 +82,26 @@ public class ProfesorProfileFragment extends Fragment {
                 if (!isAdded()) return;
                 showLoading(false);
                 Toast.makeText(requireContext(), "Greska: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void loadKolegiji() {
+        String currentProfId = supabaseClient.getCurrentUserId();
+
+        supabaseClient.getKolegijiByProfesor(currentProfId, new SupabaseClient.KolegijiCallback() {
+            @Override
+            public void onSuccess(List<Kolegij> kolegiji) {
+                if (!isAdded()) return;
+
+                adapter = new KolegijAdapter(kolegiji);
+                rvKolegiji.setAdapter(adapter);
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Greska kolegiji: " + error, Toast.LENGTH_SHORT).show();
             }
         });
     }

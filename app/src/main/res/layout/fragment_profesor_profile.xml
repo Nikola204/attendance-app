@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center"
+        android:gravity="center_horizontal"
         android:padding="24dp">
 
         <TextView
@@ -18,7 +18,8 @@
             android:text="Dobrodošli profesore"
             android:textSize="26sp"
             android:textColor="#666666"
-            android:textStyle="normal" />
+            android:textStyle="normal"
+            android:layout_marginTop="20dp" />
 
         <TextView
             android:id="@+id/tvProfesorLastName"
@@ -29,6 +30,20 @@
             android:textStyle="bold"
             android:textColor="#1976D2"
             android:layout_marginTop="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Moji kolegiji:"
+            android:layout_marginTop="32dp"
+            android:textSize="16sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvKolegiji"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:nestedScrollingEnabled="false" />
 
         <ProgressBar
             android:id="@+id/progressBarProfile"
