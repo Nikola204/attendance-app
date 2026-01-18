@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,7 @@ import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import kotlinx.serialization.json.internal.JsonException;
@@ -93,6 +95,11 @@ public class SupabaseClient {
     private void saveUserId(String userId) {
         SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
         prefs.edit().putString("user_id", userId).apply();
+    }
+
+    public interface PredavanjaCallback {
+        void onSuccess(List<Predavanje> predavanja);
+        void onError(String error);
     }
 
     public void signInWithEmail(String email, String password, AuthCallback callback) {
@@ -315,18 +322,26 @@ public class SupabaseClient {
     public void addPredavanje(Predavanje predavanje, SimpleCallback callback) {
         Handler mainHandler = new Handler(Looper.getMainLooper());
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        String formatiraniDatum = sdf.format(new Date());
-
         executor.execute(() -> {
             HttpURLConnection conn = null;
             try {
+
+                String datumZaBazu;
+                try {
+                    java.text.SimpleDateFormat ulazniFormat = new java.text.SimpleDateFormat("dd.MM.yyyy. HH:mm", java.util.Locale.getDefault());
+                    java.text.SimpleDateFormat izlazniFormat = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+                    java.util.Date d = ulazniFormat.parse(predavanje.getDatum());
+                    datumZaBazu = izlazniFormat.format(d);
+                } catch (Exception e) {
+                    datumZaBazu = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
+                }
+
                 JSONObject payload = new JSONObject();
                 try {
                     payload.put("naslov", predavanje.getNaslov());
                     payload.put("opis", predavanje.getOpis());
                     payload.put("ucionica", predavanje.getUcionica());
-                    payload.put("datum", formatiraniDatum);
+                    payload.put("datum", datumZaBazu);
                     payload.put("kolegij_id", predavanje.getKolegijId());
                 } catch (JsonException e) {
                     e.printStackTrace();
@@ -376,6 +391,52 @@ public class SupabaseClient {
             }
         });
     }
+
+
+    public void getPredavanja(String kolegijId, PredavanjaCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                String urlString = PREDAVANJE_ENDPOINT + "?kolegij_id=eq." + kolegijId;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    List<Predavanje> lista = new ArrayList<>();
+                    JSONArray array = new JSONArray(response);
+                    for (int i = 0; i < array.length(); i++) {
+                        JSONObject obj = array.getJSONObject(i);
+                        lista.add(new Predavanje(
+                                obj.optString("ucionica"),
+                                obj.optString("datum"),
+                                obj.optString("kolegij_id"),
+                                obj.optString("naslov"),
+                                obj.optString("opis")
+                        ));
+                    }
+
+                    mainHandler.post(() -> callback.onSuccess(lista));
+                } else {
+                    mainHandler.post(() -> callback.onError("Greška pri dohvaćanju: " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
     private String fetchDataFromTable(String endpoint, String userId, String accessToken) throws Exception {
         URL url = new URL(endpoint + "?id=eq." + userId);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();

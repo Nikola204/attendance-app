@@ -3,54 +3,83 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="6dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardElevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_today"
-            app:tint="#1976D2"
-            android:layout_marginEnd="16dp"/>
+        android:orientation="vertical"
+        android:padding="16dp">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/item_datum_predavanja"
-                android:layout_width="wrap_content"
+                android:id="@+id/tvStavkaNaslov"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="18. Siječanj 2024."
+                android:layout_weight="1"
+                android:text="Naziv predavanja"
+                android:textColor="#212121"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#333333" />
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/item_ucionica"
+                android:id="@+id/tvStavkaUcionica"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Učionica: 1-04"
-                android:textSize="14sp"
-                android:textColor="#666666"
-                android:layout_marginTop="2dp" />
+                android:background="#F0F0F0"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="Učionica 101"
+                android:textColor="#616161"
+                android:textSize="12sp"
+                android:textStyle="italic" />
         </LinearLayout>
 
-        <ImageView
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/tvStavkaOpis"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_media_play"
-            app:tint="#CCCCCC" />
+            android:layout_marginTop="4dp"
+            android:text="Ovdje ide kratki opis predavanja koji može biti u više redova ako je potrebno."
+            android:textColor="#757575"
+            android:textSize="14sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:background="#EEEEEE" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@android:drawable/ic_menu_my_calendar"
+                android:contentDescription="Calendar icon"
+                app:tint="#9E9E9E" />
+
+            <TextView
+                android:id="@+id/tvStavkaDatum"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="18.01.2026. 19:54"
+                android:textColor="#9E9E9E"
+                android:textSize="13sp" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

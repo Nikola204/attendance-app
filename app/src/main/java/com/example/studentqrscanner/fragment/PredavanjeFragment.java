@@ -59,6 +59,8 @@ public class PredavanjeFragment extends Fragment {
         adapter = new PredavanjeAdapter(fejkLista);
         rvPredavanja.setAdapter(adapter);
 
+        dohvatiPodatke();
+
         com.google.android.material.floatingactionbutton.FloatingActionButton fab = view.findViewById(R.id.fabDodajPredavanje);
 
         fab.setOnClickListener(v -> {
@@ -134,5 +136,23 @@ public class PredavanjeFragment extends Fragment {
         return view;
     }
 
+    private void dohvatiPodatke() {
+        supabaseClient.getPredavanja(kolegijId, new SupabaseClient.PredavanjaCallback() {
+            @Override
+            public void onSuccess(List<Predavanje> predavanja) {
+                if (isAdded()) {
+                    adapter = new PredavanjeAdapter(predavanja);
+                    rvPredavanja.setAdapter(adapter);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (isAdded()) {
+                    Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
 
 }

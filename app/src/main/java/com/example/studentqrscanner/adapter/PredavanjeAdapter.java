@@ -28,8 +28,10 @@ public class PredavanjeAdapter extends RecyclerView.Adapter<PredavanjeAdapter.Pr
     @Override
     public void onBindViewHolder(@NonNull PredavanjeViewHolder holder, int position) {
         Predavanje p = listaPredavanja.get(position);
+        holder.tvNaslov.setText(p.getNaslov());
+        holder.tvOpis.setText(p.getOpis());
         holder.tvDatum.setText(p.getDatum());
-        holder.tvUcionica.setText("Učionica: " + p.getUcionica());
+        holder.tvUcionica.setText(p.getUcionica());
     }
 
     @Override
@@ -38,12 +40,14 @@ public class PredavanjeAdapter extends RecyclerView.Adapter<PredavanjeAdapter.Pr
     }
 
     public static class PredavanjeViewHolder extends RecyclerView.ViewHolder {
-        TextView tvDatum, tvUcionica;
+        TextView tvNaslov, tvOpis, tvDatum, tvUcionica;
 
         public PredavanjeViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvDatum = itemView.findViewById(R.id.item_datum_predavanja);
-            tvUcionica = itemView.findViewById(R.id.item_ucionica);
+            tvNaslov = itemView.findViewById(R.id.tvStavkaNaslov);
+            tvOpis = itemView.findViewById(R.id.tvStavkaOpis);
+            tvDatum = itemView.findViewById(R.id.tvStavkaDatum);
+            tvUcionica = itemView.findViewById(R.id.tvStavkaUcionica);
         }
     }
 }
