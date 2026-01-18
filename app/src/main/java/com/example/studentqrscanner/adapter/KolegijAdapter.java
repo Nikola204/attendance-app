@@ -35,6 +35,24 @@ public class KolegijAdapter extends RecyclerView.Adapter<KolegijAdapter.KolegijV
         holder.tvNaziv.setText(kolegij.getNaziv());
         holder.tvStudij.setText(kolegij.getStudij());
         holder.tvGodina.setText("Godina: " + kolegij.getGodina());
+
+        holder.itemView.setOnClickListener(v -> {
+            com.example.studentqrscanner.fragment.PredavanjeFragment fragment = new com.example.studentqrscanner.fragment.PredavanjeFragment();
+
+            android.os.Bundle args = new android.os.Bundle();
+            args.putString("kolegij_id", kolegij.getId());
+            args.putString("kolegij_naziv", kolegij.getNaziv());
+            fragment.setArguments(args);
+
+            if (v.getContext() instanceof androidx.appcompat.app.AppCompatActivity) {
+                ((androidx.appcompat.app.AppCompatActivity) v.getContext()).getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragmentContainer, fragment)
+                        .addToBackStack(null)
+                        .commit();
+            }
+
+        });
     }
 
     @Override
