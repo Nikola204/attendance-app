@@ -7,12 +7,17 @@ public class Predavanje {
     private String datum;
     private String kolegij_id;
 
+    private String naslov;
+    private String opis;
+
     public Predavanje() {}
 
-    public Predavanje(String ucionica, String datum, String kolegij_id) {
+    public Predavanje(String ucionica, String datum, String kolegij_id, String naslov, String opis) {
         this.ucionica = ucionica;
         this.datum = datum;
         this.kolegij_id = kolegij_id;
+        this.naslov = naslov;
+        this.opis = opis;
     }
 
     public void setId(String id) { this.id = id; }
@@ -28,4 +33,12 @@ public class Predavanje {
 
     public String getKolegijId() { return kolegij_id; }
     public void setKolegijId(String kolegij_id) { this.kolegij_id = kolegij_id; }
+
+    public String getNaslov() {return naslov;}
+    public void setNaslov(String naslov) { this.naslov = naslov; }
+
+    public String getOpis() {return opis;}
+    public void setOpis(String opus) { this.opis = opis; }
+
+
 }

@@ -6,6 +6,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -14,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
+import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
 
 import java.util.ArrayList;
@@ -26,10 +29,14 @@ public class PredavanjeFragment extends Fragment {
     private RecyclerView rvPredavanja;
     private PredavanjeAdapter adapter;
 
+    private SupabaseClient supabaseClient;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_predavanje, container, false);
+
+        supabaseClient = new SupabaseClient(requireContext());
 
         if (getArguments() != null) {
             kolegijId = getArguments().getString("kolegij_id");
@@ -45,9 +52,9 @@ public class PredavanjeFragment extends Fragment {
         rvPredavanja.setLayoutManager(new LinearLayoutManager(getContext()));
 
         List<Predavanje> fejkLista = new ArrayList<>();
-        fejkLista.add(new Predavanje("Uučionica 101", "20.01.2024. 08:00", kolegijId));
-        fejkLista.add(new Predavanje("Uučionica 202", "27.01.2024. 08:00", kolegijId));
-        fejkLista.add(new Predavanje("Laboratorij 3", "03.02.2024. 08:00", kolegijId));
+        fejkLista.add(new Predavanje("Uučionica 101", "20.01.2024. 08:00", kolegijId, "title1", "desc1"));
+        fejkLista.add(new Predavanje("Uučionica 202", "27.01.2024. 08:00", kolegijId, "title2", "desc2"));
+        fejkLista.add(new Predavanje("Laboratorij 3", "03.02.2024. 08:00", kolegijId, "t", "t" ));
 
         adapter = new PredavanjeAdapter(fejkLista);
         rvPredavanja.setAdapter(adapter);
@@ -83,22 +90,49 @@ public class PredavanjeFragment extends Fragment {
             });
 
             btnDodaj.setOnClickListener(v2 -> {
-                String naslov = etNaslov.getText().toString();
-                String opis = etOpis.getText().toString();
-                String ucionica = etUcionica.getText().toString();
-                String datum = etDatum.getText().toString();
+                String naslov = etNaslov.getText() != null ? etNaslov.getText().toString().trim() : "";
+                String ucionica = etUcionica.getText() != null ? etUcionica.getText().toString().trim() : "";
+                String datum = etDatum.getText() != null ? etDatum.getText().toString().trim() : "";
+                String opis = etOpis.getText() != null ? etOpis.getText().toString().trim() : "";
 
-                if (naslov.isEmpty() || datum.isEmpty()) {
-                    android.widget.Toast.makeText(getContext(), "Naslov i datum su obavezni!", android.widget.Toast.LENGTH_SHORT).show();
-                } else {
-                    android.util.Log.d("NOVO_PREDAVANJE", "Spremanje: " + naslov + " u " + ucionica);
-                    dialog.dismiss();
+                if (naslov.isEmpty() || datum.isEmpty() || kolegijId == null) {
+                    Toast.makeText(requireContext(), "Nedostaju podaci!", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-            });
 
+                Predavanje novo = new Predavanje(ucionica, datum, kolegijId, naslov, opis);
+
+                btnDodaj.setEnabled(false);
+
+                supabaseClient.addPredavanje(novo, new SupabaseClient.SimpleCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (isAdded() && getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                if (dialog.isShowing()) {
+                                    dialog.dismiss();
+                                }
+                                Toast.makeText(requireContext(), "Uspješno spremljeno!", Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (isAdded() && getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                btnDodaj.setEnabled(true);
+                                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    }
+                });
+            });
             dialog.show();
         });
 
         return view;
     }
+
+
 }

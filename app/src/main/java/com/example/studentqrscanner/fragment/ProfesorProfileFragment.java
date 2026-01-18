@@ -92,10 +92,12 @@ public class ProfesorProfileFragment extends Fragment {
         supabaseClient.getKolegijiByProfesor(currentProfId, new SupabaseClient.KolegijiCallback() {
             @Override
             public void onSuccess(List<Kolegij> kolegiji) {
-                if (!isAdded()) return;
-
-                adapter = new KolegijAdapter(kolegiji);
-                rvKolegiji.setAdapter(adapter);
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        adapter = new KolegijAdapter(kolegiji);
+                        rvKolegiji.setAdapter(adapter);
+                    });
+                }
             }
 
             @Override

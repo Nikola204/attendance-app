@@ -5,24 +5,33 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
+import android.util.Log;
 
 import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.Kolegij;
+import com.example.studentqrscanner.model.Predavanje;
 import com.example.studentqrscanner.model.Profesor;
 import com.example.studentqrscanner.model.Student;
 import com.example.studentqrscanner.model.UserRole;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.json.JSONObject;
+
+import kotlinx.serialization.json.internal.JsonException;
 
 public class SupabaseClient {
 
@@ -33,6 +42,8 @@ public class SupabaseClient {
     private static final String STUDENTI_ENDPOINT = SUPABASE_URL + "/rest/v1/studenti";
     private static final String PROFESORI_ENDPOINT = SUPABASE_URL + "/rest/v1/profesori";
     private static final String KOLEGIJ_ENDPOINT = SUPABASE_URL + "/rest/v1/kolegij";
+
+    private final String PREDAVANJE_ENDPOINT = SUPABASE_URL + "/rest/v1/predavanja";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Context context;
@@ -87,6 +98,10 @@ public class SupabaseClient {
     public void signInWithEmail(String email, String password, AuthCallback callback) {
         executor.execute(() -> {
             try {
+                if (PREDAVANJE_ENDPOINT == null) {
+                    throw new Exception("Endpoint nije definiran!");
+                }
+
                 JSONObject authPayload = new JSONObject();
                 authPayload.put("email", email);
                 authPayload.put("password", password);
@@ -132,6 +147,8 @@ public class SupabaseClient {
                     postError(callback, errorMsg);
                 }
             } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() -> callback.onError("Sustav: " + e.getMessage()));
+                e.printStackTrace();
                 postError(callback, "Greska pri konekciji: " + e.getMessage());
             }
         });
@@ -237,20 +254,33 @@ public class SupabaseClient {
 
                     String jsonResponse = response.toString();
 
+                    android.util.Log.d("SUPABASE_ODGOVOR", "Sirovi JSON iz baze: " + jsonResponse);
+
                     java.util.List<Kolegij> listaKolegija = new java.util.ArrayList<>();
                     org.json.JSONArray jsonArray = new org.json.JSONArray(jsonResponse);
 
                     for (int i = 0; i < jsonArray.length(); i++) {
-                        org.json.JSONObject obj = jsonArray.getJSONObject(i);
-                        Kolegij k = new Kolegij(
-                                obj.getString("naziv"),
-                                obj.getInt("godina"),
-                                obj.getString("studij"),
-                                obj.getString("profesor_id")
-                        );
-                        listaKolegija.add(k);
-                    }
+                        try{
+                            org.json.JSONObject obj = jsonArray.getJSONObject(i);
 
+                            String naziv = obj.optString("naziv", "");
+                            String studij = obj.optString("studij", "");
+                            String profId = obj.optString("profesor_id", "");
+                            String id = obj.optString("id", null);
+
+                            int godina = obj.optInt("godina", 0);
+
+                            Kolegij k = new Kolegij(naziv, godina, studij, profId);
+                            k.setId(id);
+
+                            listaKolegija.add(k);
+
+                            android.util.Log.d("SUPABASE_OBRADA", "Uspješno dodan kolegij: " + naziv + " sa ID: " + id);
+                        } catch (Exception e)
+                        {
+                            android.util.Log.e("JSON_ERROR", "Greška pri čitanju pojedinog kolegija: " + e.getMessage());
+                        }
+                    }
                     new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(listaKolegija));
                 } else {
                     new Handler(Looper.getMainLooper()).post(() -> callback.onError("Greška: " + responseCode));
@@ -281,6 +311,71 @@ public class SupabaseClient {
         return getAccessToken() != null;
     }
 
+
+    public void addPredavanje(Predavanje predavanje, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        String formatiraniDatum = sdf.format(new Date());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                JSONObject payload = new JSONObject();
+                try {
+                    payload.put("naslov", predavanje.getNaslov());
+                    payload.put("opis", predavanje.getOpis());
+                    payload.put("ucionica", predavanje.getUcionica());
+                    payload.put("datum", formatiraniDatum);
+                    payload.put("kolegij_id", predavanje.getKolegijId());
+                } catch (JsonException e) {
+                    e.printStackTrace();
+                }
+
+                URL url = new URL(PREDAVANJE_ENDPOINT);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+
+                String errorFromStream = "";
+                if (code >= 400) {
+                    try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                        errorFromStream = s.hasNext() ? s.next() : "Nema detalja";
+                    } catch (Exception e) {
+                        errorFromStream = "Nije moguće pročitati error stream";
+                    }
+                }
+
+                final String finalError = errorFromStream;
+                final int finalCode = code;
+
+                mainHandler.post(() -> {
+                    if (finalCode >= 200 && finalCode < 300) {
+                        callback.onSuccess();
+                    } else {
+                        Log.e("SUPABASE_ERROR", "Status Code: " + finalCode);
+                        Log.e("SUPABASE_ERROR", "Detalji: " + finalError);
+
+                        callback.onError("Greška " + finalCode + ": " + finalError);
+                    }
+                });
+
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
     private String fetchDataFromTable(String endpoint, String userId, String accessToken) throws Exception {
         URL url = new URL(endpoint + "?id=eq." + userId);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();

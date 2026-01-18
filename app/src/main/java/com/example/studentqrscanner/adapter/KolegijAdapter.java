@@ -34,8 +34,7 @@ public class KolegijAdapter extends RecyclerView.Adapter<KolegijAdapter.KolegijV
 
         holder.tvNaziv.setText(kolegij.getNaziv());
         holder.tvStudij.setText(kolegij.getStudij());
-        holder.tvGodina.setText("Godina: " + kolegij.getGodina());
-
+        holder.tvGodina.setText(String.valueOf(kolegij.getGodina()));
         holder.itemView.setOnClickListener(v -> {
             com.example.studentqrscanner.fragment.PredavanjeFragment fragment = new com.example.studentqrscanner.fragment.PredavanjeFragment();
 
