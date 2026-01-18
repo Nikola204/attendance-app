@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_dialog_bg">
+
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:background="#DDDDDD"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Novo Predavanje"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#1976D2"
+        android:layout_marginBottom="20dp"/>
+
+    <EditText
+        android:id="@+id/etNaslov"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Naslov predavanja"
+        android:inputType="text"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/etOpis"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Opis (npr. poglavlje)"
+        android:inputType="textMultiLine"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/etUcionica"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Učionica"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/etDatum"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Datum i vrijeme"
+        android:focusable="false"
+        android:clickable="true"
+        android:layout_marginBottom="24dp"/>
+
+    <Button
+        android:id="@+id/btnSpremiPredavanje"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dodaj predavanje"
+        android:backgroundTint="#1976D2"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>
