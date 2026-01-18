@@ -51,12 +51,7 @@ public class PredavanjeFragment extends Fragment {
         rvPredavanja = view.findViewById(R.id.rvPredavanja);
         rvPredavanja.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        List<Predavanje> fejkLista = new ArrayList<>();
-        fejkLista.add(new Predavanje("Uučionica 101", "20.01.2024. 08:00", kolegijId, "title1", "desc1"));
-        fejkLista.add(new Predavanje("Uučionica 202", "27.01.2024. 08:00", kolegijId, "title2", "desc2"));
-        fejkLista.add(new Predavanje("Laboratorij 3", "03.02.2024. 08:00", kolegijId, "t", "t" ));
-
-        adapter = new PredavanjeAdapter(fejkLista);
+        adapter = new PredavanjeAdapter(new ArrayList<>());
         rvPredavanja.setAdapter(adapter);
 
         dohvatiPodatke();
@@ -81,15 +76,14 @@ public class PredavanjeFragment extends Fragment {
             etDatum.setOnClickListener(v1 -> {
                 java.util.Calendar kalendar = java.util.Calendar.getInstance();
 
-                new android.app.DatePickerDialog(getContext(), (view1, y, m, d) -> {
+                new android.app.DatePickerDialog(getContext(), R.style.MojPickerStil, (view1, y, m, d) -> {
 
-                    new android.app.TimePickerDialog(getContext(), (view2, h, min) -> {
+                    new android.app.TimePickerDialog(getContext(), R.style.MojPickerStil, (view2, h, min) -> {
                         String odabrano = String.format("%02d.%02d.%d. %02d:%02d", d, m + 1, y, h, min);
                         etDatum.setText(odabrano);
                     }, kalendar.get(java.util.Calendar.HOUR_OF_DAY), kalendar.get(java.util.Calendar.MINUTE), true).show();
 
-                }, kalendar.get(java.util.Calendar.YEAR), kalendar.get(java.util.Calendar.MONTH), kalendar.get(java.util.Calendar.DAY_OF_MONTH)).show();
-            });
+                }, kalendar.get(java.util.Calendar.YEAR), kalendar.get(java.util.Calendar.MONTH), kalendar.get(java.util.Calendar.DAY_OF_MONTH)).show();});
 
             btnDodaj.setOnClickListener(v2 -> {
                 String naslov = etNaslov.getText() != null ? etNaslov.getText().toString().trim() : "";
@@ -140,9 +134,12 @@ public class PredavanjeFragment extends Fragment {
         supabaseClient.getPredavanja(kolegijId, new SupabaseClient.PredavanjaCallback() {
             @Override
             public void onSuccess(List<Predavanje> predavanja) {
-                if (isAdded()) {
-                    adapter = new PredavanjeAdapter(predavanja);
-                    rvPredavanja.setAdapter(adapter);
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        adapter = new PredavanjeAdapter(predavanja);
+                        rvPredavanja.setAdapter(adapter);
+                        dohvatiPodatke();
+                    });
                 }
             }
 
