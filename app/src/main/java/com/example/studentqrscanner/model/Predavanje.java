@@ -20,6 +20,7 @@ public class Predavanje {
         this.opis = opis;
     }
 
+    public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     public String getCreatedAt() { return created_at; }
@@ -38,7 +39,5 @@ public class Predavanje {
     public void setNaslov(String naslov) { this.naslov = naslov; }
 
     public String getOpis() {return opis;}
-    public void setOpis(String opus) { this.opis = opis; }
-
-
+    public void setOpis(String opis) { this.opis = opis; }
 }

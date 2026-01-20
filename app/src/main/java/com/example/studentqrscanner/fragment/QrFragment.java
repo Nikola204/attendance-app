@@ -17,8 +17,11 @@ import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.LoginActivity;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.config.SupabaseClient;
+import com.example.studentqrscanner.model.Predavanje;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+
+import java.util.Locale;
 
 public class QrFragment extends Fragment {
 
@@ -79,26 +82,105 @@ public class QrFragment extends Fragment {
         allowAutoStart = false;
         if (result != null) {
             if (result.getContents() != null) {
-                String scanned = result.getContents();
-                tvLastResult.setText("Posljednji rezultat: " + scanned);
-                showResultDialog(scanned);
+                handleScanResult(result.getContents());
             } else {
                 Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    private void showResultDialog(String scanned) {
+    private void handleScanResult(String scanned) {
         if (!isAdded()) return;
+
+        String predavanjeId = extractPredavanjeId(scanned);
+        if (predavanjeId == null) {
+            tvLastResult.setText("Nevažeći QR kod");
+            Toast.makeText(requireContext(), "QR ne sadrži ID predavanja", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        tvLastResult.setText("Pronađen QR, dohvaćam podatke...");
+        fetchPredavanje(predavanjeId);
+    }
+
+    private String extractPredavanjeId(String scanned) {
+        if (scanned == null) return null;
+        String trimmed = scanned.trim();
+
+        String lower = trimmed.toLowerCase(Locale.US);
+        int markerIndex = lower.indexOf("predavanjeid=");
+        if (markerIndex >= 0) {
+            String idPart = trimmed.substring(markerIndex + "predavanjeId=".length());
+            int ampIndex = idPart.indexOf("&");
+            if (ampIndex >= 0) {
+                idPart = idPart.substring(0, ampIndex);
+            }
+            trimmed = idPart.trim();
+        } else if (trimmed.contains("=")) {
+            String[] parts = trimmed.split("=", 2);
+            trimmed = parts[1].trim();
+        }
+
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void fetchPredavanje(String predavanjeId) {
+        supabaseClient.getPredavanjeById(predavanjeId, new SupabaseClient.PredavanjeDetailCallback() {
+            @Override
+            public void onSuccess(Predavanje predavanje) {
+                if (!isAdded()) return;
+                String naziv = predavanje.getNaslov() != null ? predavanje.getNaslov() : "Predavanje";
+                tvLastResult.setText("Predavanje: " + naziv);
+                showAttendanceDialog(predavanje);
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                tvLastResult.setText("Greška: " + error);
+                Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void showAttendanceDialog(Predavanje predavanje) {
+        if (!isAdded()) return;
+
+        String naziv = predavanje.getNaslov() != null ? predavanje.getNaslov() : "Predavanje";
+        String datum = predavanje.getDatum() != null ? predavanje.getDatum() : "";
+        String message = datum.isEmpty() ? "Zelite li evidentirati dolazak?" : "Evidentirati dolazak za datum: " + datum;
+
         new AlertDialog.Builder(requireContext())
-                .setTitle("Skenirano")
-                .setMessage(scanned)
-                .setPositiveButton("OK", null)
+                .setTitle(naziv)
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> potvrdiDolazak(predavanje.getId()))
                 .setNegativeButton("Ponovo skeniraj", (dialog, which) -> {
                     allowAutoStart = true;
                     startScan();
                 })
                 .show();
+    }
+
+    private void potvrdiDolazak(String predavanjeId) {
+        if (!isAdded()) return;
+        if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Nedostaje ID predavanja", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        supabaseClient.addEvidencija(predavanjeId, new SupabaseClient.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Dolazak evidentiran", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void navigateToLogin() {
