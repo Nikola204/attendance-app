@@ -416,13 +416,16 @@ public class SupabaseClient {
                     JSONArray array = new JSONArray(response);
                     for (int i = 0; i < array.length(); i++) {
                         JSONObject obj = array.getJSONObject(i);
-                        lista.add(new Predavanje(
+                        Predavanje predavanje = new Predavanje(
                                 obj.optString("ucionica"),
                                 obj.optString("datum"),
                                 obj.optString("kolegij_id"),
                                 obj.optString("naslov"),
                                 obj.optString("opis")
-                        ));
+                        );
+                        predavanje.setId(obj.optString("id", null));
+                        predavanje.setCreatedAt(obj.optString("created_at", null));
+                        lista.add(predavanje);
                     }
 
                     mainHandler.post(() -> callback.onSuccess(lista));

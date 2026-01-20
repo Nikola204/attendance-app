@@ -4,18 +4,32 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.model.Predavanje;
+
 import java.util.List;
 
 public class PredavanjeAdapter extends RecyclerView.Adapter<PredavanjeAdapter.PredavanjeViewHolder> {
 
-    private List<Predavanje> listaPredavanja;
+    public interface OnPredavanjeClickListener {
+        void onPredavanjeClick(Predavanje predavanje);
+    }
 
-    public PredavanjeAdapter(List<Predavanje> listaPredavanja) {
+    private List<Predavanje> listaPredavanja;
+    private final OnPredavanjeClickListener listener;
+
+    public PredavanjeAdapter(List<Predavanje> listaPredavanja, OnPredavanjeClickListener listener) {
         this.listaPredavanja = listaPredavanja;
+        this.listener = listener;
+    }
+
+    public void updateData(List<Predavanje> novaPredavanja) {
+        this.listaPredavanja = novaPredavanja;
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -32,6 +46,11 @@ public class PredavanjeAdapter extends RecyclerView.Adapter<PredavanjeAdapter.Pr
         holder.tvOpis.setText(p.getOpis());
         holder.tvDatum.setText(p.getDatum());
         holder.tvUcionica.setText(p.getUcionica());
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onPredavanjeClick(p);
+            }
+        });
     }
 
     @Override
