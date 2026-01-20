@@ -46,6 +46,7 @@ public class SupabaseClient {
     private static final String KOLEGIJ_ENDPOINT = SUPABASE_URL + "/rest/v1/kolegij";
 
     private final String PREDAVANJE_ENDPOINT = SUPABASE_URL + "/rest/v1/predavanja";
+    private final String EVIDENCIJA_ENDPOINT = SUPABASE_URL + "/rest/v1/evidencija";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Context context;
@@ -82,6 +83,16 @@ public class SupabaseClient {
         return prefs.getString("access_token", null);
     }
 
+    private void saveStudentTableId(String id) {
+        SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
+        prefs.edit().putString("student_table_id", id).apply();
+    }
+
+    private String getStudentTableId() {
+        SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
+        return prefs.getString("student_table_id", null);
+    }
+
     public String getCurrentUserId() {
         SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
         return prefs.getString("user_id", null);
@@ -99,6 +110,11 @@ public class SupabaseClient {
 
     public interface PredavanjaCallback {
         void onSuccess(List<Predavanje> predavanja);
+        void onError(String error);
+    }
+
+    public interface PredavanjeDetailCallback {
+        void onSuccess(Predavanje predavanje);
         void onError(String error);
     }
 
@@ -173,6 +189,9 @@ public class SupabaseClient {
                 if (studentData != null) {
                     JSONObject j = new JSONObject(studentData);
                     Student student = new Student();
+                    String tableId = j.optString("id", userId);
+                    student.setId(tableId);
+                    saveStudentTableId(tableId);
                     student.setEmail(j.optString("email", ""));
                     student.setIme(j.getString("ime"));
                     student.setPrezime(j.getString("prezime"));
@@ -460,5 +479,139 @@ public class SupabaseClient {
             }
         }
         return null;
+    }
+
+    public void getPredavanjeById(String predavanjeId, PredavanjeDetailCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID predavanja"));
+                    return;
+                }
+
+                String encodedId = java.net.URLEncoder.encode(predavanjeId, java.nio.charset.StandardCharsets.UTF_8.toString());
+                URL url = new URL(PREDAVANJE_ENDPOINT + "?id=eq." + encodedId);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    JSONArray array = new JSONArray(response);
+                    if (array.length() == 0) {
+                        mainHandler.post(() -> callback.onError("Predavanje nije pronađeno."));
+                        return;
+                    }
+
+                    JSONObject obj = array.getJSONObject(0);
+                    Predavanje predavanje = new Predavanje(
+                            obj.optString("ucionica"),
+                            obj.optString("datum"),
+                            obj.optString("kolegij_id"),
+                            obj.optString("naslov"),
+                            obj.optString("opis")
+                    );
+                    predavanje.setId(obj.optString("id", null));
+                    predavanje.setCreatedAt(obj.optString("created_at", null));
+
+                    mainHandler.post(() -> callback.onSuccess(predavanje));
+                } else {
+                    Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
+                    String err = s.hasNext() ? s.next() : "Nepoznata greška";
+                    mainHandler.post(() -> callback.onError("Greška " + code + ": " + err));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void addEvidencija(String predavanjeId, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID predavanja."));
+                    return;
+                }
+
+                String studentId = getStudentTableId();
+                if (studentId == null) {
+                    studentId = getCurrentUserId();
+                }
+                if (studentId == null) {
+                    mainHandler.post(() -> callback.onError("Korisnik nije prijavljen."));
+                    return;
+                }
+
+                String datum = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+
+                JSONObject payload = new JSONObject();
+                // If evidencija.id has FK to predavanja.id, set it explicitly; keep predavanje_id for schemas that use it.
+                payload.put("id", predavanjeId);
+                payload.put("predavanje_id", predavanjeId);
+                payload.put("student_id", studentId);
+                payload.put("datum", datum);
+
+                URL url = new URL(EVIDENCIJA_ENDPOINT);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+                conn.setRequestProperty("Prefer", "return=minimal, resolution=ignore-duplicates");
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
+                    String err = s.hasNext() ? s.next() : "Nepoznata greska";
+                    String parsed = parseErrorMessage(err);
+                    mainHandler.post(() -> callback.onError("Greska " + code + ": " + parsed));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    private String parseErrorMessage(String raw) {
+        try {
+            JSONObject obj = new JSONObject(raw);
+            String message = obj.optString("message", "");
+            String details = obj.optString("details", "");
+            String code = obj.optString("code", "");
+
+            StringBuilder sb = new StringBuilder();
+            if (!code.isEmpty()) sb.append(code).append(": ");
+            if (!message.isEmpty()) sb.append(message);
+            if (!details.isEmpty()) {
+                if (sb.length() > 0) sb.append(" - ");
+                sb.append(details);
+            }
+
+            if (sb.length() > 0) return sb.toString();
+        } catch (Exception ignored) { }
+        return raw;
     }
 }
