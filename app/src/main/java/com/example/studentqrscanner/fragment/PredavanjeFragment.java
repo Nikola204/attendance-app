@@ -10,13 +10,11 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
@@ -27,7 +25,6 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -123,7 +120,7 @@ public class PredavanjeFragment extends Fragment {
                                 if (dialog.isShowing()) {
                                     dialog.dismiss();
                                 }
-                                Toast.makeText(requireContext(), "UspjeÅ¡no spremljeno!", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(requireContext(), "Uspješno spremljeno!", Toast.LENGTH_SHORT).show();
                                 dohvatiPodatke();
                             });
                         }
@@ -134,7 +131,7 @@ public class PredavanjeFragment extends Fragment {
                         if (isAdded() && getActivity() != null) {
                             getActivity().runOnUiThread(() -> {
                                 btnDodaj.setEnabled(true);
-                                Toast.makeText(requireContext(), "GreÅ¡ka: " + error, Toast.LENGTH_LONG).show();
+                                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
                             });
                         }
                     }
@@ -186,9 +183,9 @@ public class PredavanjeFragment extends Fragment {
         Date startDate = parseDatum(predavanje.getDatum());
         SimpleDateFormat displayFormat = new SimpleDateFormat("dd.MM.yyyy. HH:mm", Locale.getDefault());
         if (startDate != null) {
-            tvWindow.setText("Pocetak: " + displayFormat.format(startDate));
+            tvWindow.setText("Početak: " + displayFormat.format(startDate));
         } else {
-            tvWindow.setText("Vrijeme pocetka nije dostupno.");
+            tvWindow.setText("Vrijeme početka nije dostupno.");
         }
 
         String qrPayload = buildQrPayload(predavanje);
@@ -251,7 +248,7 @@ public class PredavanjeFragment extends Fragment {
             return bitmap;
         } catch (WriterException e) {
             if (isAdded()) {
-                Toast.makeText(requireContext(), "Greska pri generisanju QR koda.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Greška pri generisanju QR koda.", Toast.LENGTH_SHORT).show();
             }
             return null;
         }

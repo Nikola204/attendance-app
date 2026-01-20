@@ -94,12 +94,12 @@ public class QrFragment extends Fragment {
 
         String predavanjeId = extractPredavanjeId(scanned);
         if (predavanjeId == null) {
-            tvLastResult.setText("Nevazeci QR kod");
-            Toast.makeText(requireContext(), "QR ne sadrzi ID predavanja", Toast.LENGTH_LONG).show();
+            tvLastResult.setText("Nevažeći QR kod");
+            Toast.makeText(requireContext(), "QR ne sadrži ID predavanja", Toast.LENGTH_LONG).show();
             return;
         }
 
-        tvLastResult.setText("Pronadjen QR, dohvacam podatke...");
+        tvLastResult.setText("Pronađen QR, dohvaćam podatke...");
         fetchPredavanje(predavanjeId);
     }
 
@@ -137,7 +137,7 @@ public class QrFragment extends Fragment {
             @Override
             public void onError(String error) {
                 if (!isAdded()) return;
-                tvLastResult.setText("Greska: " + error);
+                tvLastResult.setText("Greška: " + error);
                 Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
             }
         });
@@ -178,7 +178,7 @@ public class QrFragment extends Fragment {
             @Override
             public void onError(String error) {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Greska: " + error, Toast.LENGTH_LONG).show();
+                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
             }
         });
     }
