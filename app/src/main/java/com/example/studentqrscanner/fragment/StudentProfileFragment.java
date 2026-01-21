@@ -80,7 +80,7 @@ public class StudentProfileFragment extends Fragment {
                     tvGodina.setText(String.valueOf(student.getGodina()));
 
                     // Generate and display QR code
-                    generateQrCode(student.getFullName(), student.getBrojIndexa());
+                    generateQrCode(student);
                 } else {
                     Toast.makeText(requireContext(), "Profil nije dostupan.", Toast.LENGTH_LONG).show();
                 }
@@ -114,13 +114,17 @@ public class StudentProfileFragment extends Fragment {
     /**
      * Generiranje QR koda na osnovu imena i broja indexa
      */
-    private void generateQrCode(String fullName, String brojIndexa) {
-        if (fullName == null || fullName.isEmpty() || brojIndexa == null || brojIndexa.isEmpty()) {
+    private void generateQrCode(Student student) {
+        if (student == null || student.getFullName() == null || student.getFullName().isEmpty()
+                || student.getBrojIndexa() == null || student.getBrojIndexa().isEmpty()
+                || student.getId() == null || student.getId().isEmpty()) {
             Toast.makeText(requireContext(), "Podaci za QR kod nisu dostupni", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String qrContent = fullName + " - " + brojIndexa;
+        String qrContent = "studentId=" + student.getId()
+                + "&index=" + student.getBrojIndexa()
+                + "&name=" + student.getFullName();
 
         try {
             QRCodeWriter qrCodeWriter = new QRCodeWriter();

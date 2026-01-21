@@ -2,6 +2,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="Base.Theme.StudentQRScanner" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/moja_boja_kalendara</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/moja_boja_kalendara</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
+        <item name="colorSecondary">@color/moja_boja_kalendara</item>
+        <item name="colorSecondaryContainer">@color/moja_boja_kalendara</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorOnSecondaryContainer">@color/white</item>
     </style>
 
     <style name="Theme.StudentQRScanner" parent="Base.Theme.StudentQRScanner" />

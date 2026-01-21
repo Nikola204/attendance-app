@@ -6,14 +6,32 @@
     android:padding="24dp"
     android:background="@color/white">
 
-    <TextView
-        android:id="@+id/tvQrTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="QR kod predavanja"
-        android:textColor="#212121"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvQrTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="QR kod predavanja"
+            android:textColor="#212121"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnScanStudent"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Skeniraj studenta"
+            android:padding="6dp"
+            android:src="@drawable/ic_qr_square"
+            android:tint="@color/moja_boja_kalendara" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvQrWindow"
