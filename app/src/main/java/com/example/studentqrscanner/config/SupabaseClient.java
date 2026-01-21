@@ -20,6 +20,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -115,6 +116,11 @@ public class SupabaseClient {
 
     public interface PredavanjeDetailCallback {
         void onSuccess(Predavanje predavanje);
+        void onError(String error);
+    }
+
+    public interface StudentIdCallback {
+        void onSuccess(String studentId);
         void onError(String error);
     }
 
@@ -536,6 +542,55 @@ public class SupabaseClient {
         });
     }
 
+    public void fetchStudentIdByIndex(String brojIndexa, StudentIdCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (brojIndexa == null || brojIndexa.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje broj indexa."));
+                    return;
+                }
+
+                String encoded = URLEncoder.encode(brojIndexa, StandardCharsets.UTF_8.toString());
+                String urlString = STUDENTI_ENDPOINT + "?broj_indexa=eq." + encoded + "&select=id";
+
+                URL url = new URL(urlString);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    InputStream is = conn.getInputStream();
+                    Scanner s = new Scanner(is).useDelimiter("\\A");
+                    String resp = s.hasNext() ? s.next() : "[]";
+
+                    JSONArray arr = new JSONArray(resp);
+                    if (arr.length() > 0) {
+                        JSONObject obj = arr.getJSONObject(0);
+                        String id = obj.optString("id", null);
+                        if (id != null && !id.trim().isEmpty()) {
+                            mainHandler.post(() -> callback.onSuccess(id));
+                            return;
+                        }
+                    }
+                    mainHandler.post(() -> callback.onError("Student nije pronađen."));
+                } else {
+                    Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
+                    String err = s.hasNext() ? s.next() : "Nepoznata greska";
+                    mainHandler.post(() -> callback.onError("Greška " + code + ": " + err));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
     public void addEvidencija(String predavanjeId, SimpleCallback callback) {
         Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -560,6 +615,59 @@ public class SupabaseClient {
 
                 JSONObject payload = new JSONObject();
                 // If evidencija.id has FK to predavanja.id, set it explicitly; keep predavanje_id for schemas that use it.
+                payload.put("id", predavanjeId);
+                payload.put("predavanje_id", predavanjeId);
+                payload.put("student_id", studentId);
+                payload.put("datum", datum);
+
+                URL url = new URL(EVIDENCIJA_ENDPOINT);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+                conn.setRequestProperty("Prefer", "return=minimal, resolution=ignore-duplicates");
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
+                    String err = s.hasNext() ? s.next() : "Nepoznata greska";
+                    String parsed = parseErrorMessage(err);
+                    mainHandler.post(() -> callback.onError("Greska " + code + ": " + parsed));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void addEvidencijaZaStudenta(String predavanjeId, String studentId, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID predavanja."));
+                    return;
+                }
+                if (studentId == null || studentId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID studenta."));
+                    return;
+                }
+
+                String datum = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+
+                JSONObject payload = new JSONObject();
                 payload.put("id", predavanjeId);
                 payload.put("predavanje_id", predavanjeId);
                 payload.put("student_id", studentId);

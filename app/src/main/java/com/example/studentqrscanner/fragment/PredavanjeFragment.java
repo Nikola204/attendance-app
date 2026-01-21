@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.studentqrscanner.R;
+import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
@@ -25,6 +27,8 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,6 +41,8 @@ public class PredavanjeFragment extends Fragment {
     private String kolegijNaziv;
     private RecyclerView rvPredavanja;
     private PredavanjeAdapter adapter;
+    private Predavanje targetPredavanjeForScan;
+    private boolean scanningStudent = false;
 
     private SupabaseClient supabaseClient;
 
@@ -177,6 +183,7 @@ public class PredavanjeFragment extends Fragment {
         TextView tvWindow = dialogView.findViewById(R.id.tvQrWindow);
         TextView tvStatus = dialogView.findViewById(R.id.tvQrStatus);
         ImageView ivQr = dialogView.findViewById(R.id.ivPredavanjeQr);
+        ImageButton btnScanStudent = dialogView.findViewById(R.id.btnScanStudent);
 
         tvTitle.setText(predavanje.getNaslov() != null ? predavanje.getNaslov() : "Predavanje");
 
@@ -198,6 +205,11 @@ public class PredavanjeFragment extends Fragment {
             tvStatus.setText("Greska pri generisanju QR koda.");
             ivQr.setVisibility(View.GONE);
         }
+
+        btnScanStudent.setOnClickListener(v -> {
+            targetPredavanjeForScan = predavanje;
+            startStudentScan();
+        });
 
         dialog.show();
     }
@@ -252,5 +264,131 @@ public class PredavanjeFragment extends Fragment {
             }
             return null;
         }
+    }
+
+    private void startStudentScan() {
+        if (!isAdded()) return;
+        if (targetPredavanjeForScan == null || targetPredavanjeForScan.getId() == null || targetPredavanjeForScan.getId().trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Nedostaje ID predavanja.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (scanningStudent) return;
+        scanningStudent = true;
+        IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
+        integrator.setPrompt("Skeniraj QR studenta");
+        integrator.setBeepEnabled(true);
+        integrator.setOrientationLocked(true);
+        integrator.setCaptureActivity(PortraitCaptureActivity.class);
+        integrator.initiateScan();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable android.content.Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if (result != null) {
+            scanningStudent = false;
+            if (result.getContents() != null) {
+                handleStudentScanResult(result.getContents());
+            } else if (isAdded()) {
+                Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void handleStudentScanResult(String contents) {
+        if (!isAdded()) return;
+        if (targetPredavanjeForScan == null || targetPredavanjeForScan.getId() == null) {
+            Toast.makeText(requireContext(), "Nedostaje predavanje za evidenciju.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StudentScanData data = parseStudentScan(contents);
+        if (data.studentId != null && !data.studentId.isEmpty()) {
+            potvrdiDolazakZaStudenta(data.studentId);
+        } else if (data.index != null && !data.index.isEmpty()) {
+            supabaseClient.fetchStudentIdByIndex(data.index, new SupabaseClient.StudentIdCallback() {
+                @Override
+                public void onSuccess(String studentId) {
+                    if (!isAdded()) return;
+                    potvrdiDolazakZaStudenta(studentId);
+                }
+
+                @Override
+                public void onError(String error) {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Student nije pronaden: " + error, Toast.LENGTH_LONG).show();
+                }
+            });
+        } else {
+            Toast.makeText(requireContext(), "QR ne sadrzi podatke o studentu.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void potvrdiDolazakZaStudenta(String studentId) {
+        if (!isAdded()) return;
+        if (targetPredavanjeForScan == null || targetPredavanjeForScan.getId() == null || studentId == null || studentId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Nedostaju ID predavanja ili studenta.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        supabaseClient.addEvidencijaZaStudenta(targetPredavanjeForScan.getId(), studentId, new SupabaseClient.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Dolazak studenta evidentiran.", Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private StudentScanData parseStudentScan(String raw) {
+        StudentScanData data = new StudentScanData();
+        if (raw == null) return data;
+
+        String lower = raw.toLowerCase(Locale.US);
+
+        int idIndex = lower.indexOf("studentid=");
+        if (idIndex >= 0) {
+            String idPart = raw.substring(idIndex + "studentId=".length());
+            int ampIndex = idPart.indexOf("&");
+            if (ampIndex >= 0) {
+                idPart = idPart.substring(0, ampIndex);
+            }
+            data.studentId = idPart.trim();
+        }
+
+        int indexIndex = lower.indexOf("index=");
+        if (indexIndex >= 0) {
+            String idxPart = raw.substring(indexIndex + "index=".length());
+            int ampIndex = idxPart.indexOf("&");
+            if (ampIndex >= 0) {
+                idxPart = idxPart.substring(0, ampIndex);
+            }
+            data.index = idxPart.trim();
+        } else if (lower.contains("broj_indexa=")) {
+            String idxPart = raw.substring(lower.indexOf("broj_indexa=") + "broj_indexa=".length());
+            int ampIndex = idxPart.indexOf("&");
+            if (ampIndex >= 0) {
+                idxPart = idxPart.substring(0, ampIndex);
+            }
+            data.index = idxPart.trim();
+        } else if (raw.contains(" - ")) {
+            String[] parts = raw.split(" - ");
+            data.index = parts[parts.length - 1].trim();
+        }
+
+        return data;
+    }
+
+    private static class StudentScanData {
+        String studentId;
+        String index;
     }
 }
