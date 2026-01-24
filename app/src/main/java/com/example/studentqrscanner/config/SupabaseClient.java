@@ -124,6 +124,11 @@ public class SupabaseClient {
         void onError(String error);
     }
 
+    public interface AttendanceListCallback {
+        void onSuccess(List<com.example.studentqrscanner.model.AttendanceItem> items);
+        void onError(String error);
+    }
+
     public void signInWithEmail(String email, String password, AuthCallback callback) {
         executor.execute(() -> {
             try {
@@ -694,6 +699,101 @@ public class SupabaseClient {
                     String err = s.hasNext() ? s.next() : "Nepoznata greska";
                     String parsed = parseErrorMessage(err);
                     mainHandler.post(() -> callback.onError("Greska " + code + ": " + parsed));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void getPrisutniStudenti(String predavanjeId, AttendanceListCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID predavanja"));
+                    return;
+                }
+
+                // select=id,datum,studenti(ime,prezime,broj_indexa) from evidencija where predavanje_id=...
+                // URL encoding for select value: *,studenti(ime,prezime,broj_indexa)
+                String selectQuery = "id,datum,studenti(ime,prezime,broj_indexa)";
+                String encodedSelect = URLEncoder.encode(selectQuery, StandardCharsets.UTF_8.toString());
+                
+                String urlString = EVIDENCIJA_ENDPOINT + "?predavanje_id=eq." + predavanjeId + "&select=" + encodedSelect;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    List<com.example.studentqrscanner.model.AttendanceItem> items = new ArrayList<>();
+                    JSONArray array = new JSONArray(response);
+
+                    for (int i = 0; i < array.length(); i++) {
+                        JSONObject obj = array.getJSONObject(i);
+                        String id = obj.optString("id");
+                        String date = obj.optString("datum"); // e.g., 2026-01-24
+
+                        JSONObject studentObj = obj.optJSONObject("studenti");
+                        String ime = "", prezime = "", index = "";
+                        
+                        if (studentObj != null) {
+                            ime = studentObj.optString("ime", "");
+                            prezime = studentObj.optString("prezime", "");
+                            index = studentObj.optString("broj_indexa", "");
+                        }
+
+                        String fullName = ime + " " + prezime;
+                        if (fullName.trim().isEmpty()) fullName = "Nepoznat student";
+
+                        items.add(new com.example.studentqrscanner.model.AttendanceItem(id, fullName, index, date));
+                    }
+
+                    mainHandler.post(() -> callback.onSuccess(items));
+                } else {
+                    mainHandler.post(() -> callback.onError("Greška " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void deleteEvidencija(String evidencijaId, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+        
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (evidencijaId == null) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID"));
+                    return;
+                }
+
+                URL url = new URL(EVIDENCIJA_ENDPOINT + "?id=eq." + evidencijaId);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("DELETE");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    mainHandler.post(() -> callback.onError("Greška pri brisanju: " + code));
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
