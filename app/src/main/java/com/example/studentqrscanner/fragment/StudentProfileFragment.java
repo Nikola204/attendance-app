@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -18,9 +19,11 @@ import androidx.fragment.app.Fragment;
 
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.LoginActivity;
+import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.Student;
+import com.example.studentqrscanner.util.CustomQrGenerator;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -36,6 +39,7 @@ public class StudentProfileFragment extends Fragment {
     private ProgressBar progressBar;
 
     private SupabaseClient supabaseClient;
+    private Student currentStudent; // Čuvamo trenutnog studenta za refresh
 
     @Nullable
     @Override
@@ -51,8 +55,14 @@ public class StudentProfileFragment extends Fragment {
         tvStudij = view.findViewById(R.id.tvStudij);
         tvGodina = view.findViewById(R.id.tvGodina);
         ivQrCode = view.findViewById(R.id.ivQrCode);
-        ivQrCode = view.findViewById(R.id.ivQrCode);
         progressBar = view.findViewById(R.id.progressBarProfile);
+
+        Button btnShowQrStyles = view.findViewById(R.id.btnShowQrStyles);
+        btnShowQrStyles.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), QrStyleSelectorActivity.class);
+            intent.putExtra("is_student", true);
+            startActivity(intent);
+        });
 
         supabaseClient = new SupabaseClient(requireContext());
 
@@ -61,8 +71,16 @@ public class StudentProfileFragment extends Fragment {
             return;
         }
 
-
         loadProfile();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Osvježi QR kod ako se korisnik vratio iz style selector-a
+        if (currentStudent != null) {
+            generateQrCode(currentStudent);
+        }
     }
 
     private void loadProfile() {
@@ -73,14 +91,14 @@ public class StudentProfileFragment extends Fragment {
                 if (!isAdded()) return;
                 showLoading(false);
                 if (user instanceof Student) {
-                    Student student = (Student) user;
-                    tvFullName.setText(student.getFullName());
-                    tvBrojIndexa.setText(student.getBrojIndexa());
-                    tvStudij.setText(student.getStudij());
-                    tvGodina.setText(String.valueOf(student.getGodina()));
+                    currentStudent = (Student) user;
+                    tvFullName.setText(currentStudent.getFullName());
+                    tvBrojIndexa.setText(currentStudent.getBrojIndexa());
+                    tvStudij.setText(currentStudent.getStudij());
+                    tvGodina.setText(String.valueOf(currentStudent.getGodina()));
 
                     // Generate and display QR code
-                    generateQrCode(student);
+                    generateQrCode(currentStudent);
                 } else {
                     Toast.makeText(requireContext(), "Profil nije dostupan.", Toast.LENGTH_LONG).show();
                 }
@@ -112,7 +130,7 @@ public class StudentProfileFragment extends Fragment {
     }
 
     /**
-     * Generiranje QR koda na osnovu imena i broja indexa
+     * Generiranje custom QR koda sa odabranim stilom za studenta
      */
     private void generateQrCode(Student student) {
         if (student == null || student.getFullName() == null || student.getFullName().isEmpty()
@@ -122,28 +140,21 @@ public class StudentProfileFragment extends Fragment {
             return;
         }
 
-        String qrContent = "studentId=" + student.getId()
-                + "&index=" + student.getBrojIndexa()
-                + "&name=" + student.getFullName();
+        // Učitaj odabrani stil iz preferences
+        CustomQrGenerator.QrStyle selectedStyle = QrStyleSelectorActivity.getSavedStudentStyle(requireContext());
 
-        try {
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
+        // Generiši QR kod sa odabranim stilom
+        String content = "studentId=" + student.getId() +
+                "&index=" + student.getBrojIndexa() +
+                "&name=" + student.getFullName();
 
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        CustomQrGenerator generator = new CustomQrGenerator(requireContext());
+        Bitmap qrBitmap = generator.generateStyledQr(content, selectedStyle, "Student: " + student.getBrojIndexa());
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
-                }
-            }
-
-            ivQrCode.setImageBitmap(bitmap);
-        } catch (WriterException e) {
+        if (qrBitmap != null) {
+            ivQrCode.setImageBitmap(qrBitmap);
+        } else {
             Toast.makeText(requireContext(), "Greška pri generisanju QR koda", Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
         }
     }
 }

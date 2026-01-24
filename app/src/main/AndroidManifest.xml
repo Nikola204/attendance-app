@@ -46,6 +46,12 @@
             android:stateNotNeeded="true"
             android:exported="false" />
 
+        <!-- QR Style Selector Activity -->
+        <activity
+            android:name=".activity.QrStyleSelectorActivity"
+            android:exported="false"
+            android:label="Izaberi QR Stil" />
+
     </application>
 
 </manifest>

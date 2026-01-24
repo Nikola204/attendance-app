@@ -18,9 +18,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
+import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
+import com.example.studentqrscanner.util.CustomQrGenerator;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.zxing.BarcodeFormat;
@@ -243,27 +245,18 @@ public class PredavanjeFragment extends Fragment {
     }
 
     private Bitmap generateQrBitmap(String content) {
-        try {
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 500, 500);
+        if (!isAdded()) return null;
 
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        // Učitaj odabrani stil profesora iz preferences
+        CustomQrGenerator.QrStyle selectedStyle = QrStyleSelectorActivity.getSavedProfessorStyle(requireContext());
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
-                }
-            }
-
-            return bitmap;
-        } catch (WriterException e) {
-            if (isAdded()) {
-                Toast.makeText(requireContext(), "Greška pri generisanju QR koda.", Toast.LENGTH_SHORT).show();
-            }
-            return null;
-        }
+        // Generiši QR kod sa odabranim stilom
+        CustomQrGenerator generator = new CustomQrGenerator(requireContext());
+        return generator.generateStyledQr(
+                content,
+                selectedStyle,
+                "Skeniraj za prisustvo"
+        );
     }
 
     private void startStudentScan() {
