@@ -1,6 +1,8 @@
 package com.example.studentqrscanner.fragment;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,9 +11,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.studentqrscanner.R;
@@ -31,6 +35,20 @@ public class QrFragment extends Fragment {
 
     private boolean scanning = false;
     private boolean allowAutoStart = true;
+
+    // Permission launcher za kameru
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            isGranted -> {
+                if (isGranted) {
+                    // Permisija odobrena, pokreni scan
+                    startScanInternal();
+                } else {
+                    // Permisija odbijena
+                    Toast.makeText(requireContext(), "Kamera permisija je potrebna za skeniranje QR koda", Toast.LENGTH_LONG).show();
+                    scanning = false;
+                }
+            });
 
     // Modern Activity Result API
     private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(
@@ -79,6 +97,18 @@ public class QrFragment extends Fragment {
         if (scanning || !isAdded()) return;
         scanning = true;
 
+        // Provjeri da li imamo permisiju
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            // Imamo permisiju, pokreni scan
+            startScanInternal();
+        } else {
+            // Traži permisiju
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void startScanInternal() {
         ScanOptions options = new ScanOptions();
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
         options.setPrompt("Skeniraj QR kod");
