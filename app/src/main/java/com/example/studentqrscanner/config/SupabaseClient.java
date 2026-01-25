@@ -755,7 +755,6 @@ public class SupabaseClient {
                         }
 
                         String fullName = ime + " " + prezime;
-                        if (fullName.trim().isEmpty()) fullName = "Nepoznat student";
 
                         items.add(new com.example.studentqrscanner.model.AttendanceItem(id, fullName, index, date));
                     }
