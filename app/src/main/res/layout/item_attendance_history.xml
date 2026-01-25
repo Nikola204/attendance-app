@@ -77,7 +77,7 @@
             android:id="@+id/viewStatus"
             android:layout_width="12dp"
             android:layout_height="12dp"
-            android:background="@drawable/shape_circle_green"
+            android:background="@drawable/shape_circle_blue"
             android:layout_marginStart="8dp" />
 
     </LinearLayout>

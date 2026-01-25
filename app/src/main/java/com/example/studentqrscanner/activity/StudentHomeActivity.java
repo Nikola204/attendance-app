@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -19,7 +20,7 @@ import com.example.studentqrscanner.fragment.AnalyticsFragment;
 import com.example.studentqrscanner.fragment.QrFragment;
 import com.example.studentqrscanner.fragment.StudentProfileFragment;
 
-public class StudentHomeActivity extends AppCompatActivity {
+public class StudentHomeActivity extends BaseActivity {
 
     private static final int TAB_ANALYTICS = 0;
     private static final int TAB_SCAN = 1;
@@ -99,14 +100,7 @@ public class StudentHomeActivity extends AppCompatActivity {
     }
 
     private void setupTopNavbar() {
-        TextView tvLanguage = findViewById(R.id.tvLanguage);
         ImageView btnMenu = findViewById(R.id.btnMenu);
-
-        tvLanguage.setOnClickListener(v -> {
-            String current = tvLanguage.getText().toString();
-            tvLanguage.setText(current.equals("EN") ? "HR" : "EN");
-        });
-
         btnMenu.setOnClickListener(v -> showPopupMenu(v));
     }
 
@@ -117,6 +111,9 @@ public class StudentHomeActivity extends AppCompatActivity {
             if (item.getItemId() == R.id.action_logout) {
                 supabaseClient.signOut();
                 navigateToLogin();
+                return true;
+            } else if (item.getItemId() == R.id.action_settings) {
+                startActivity(new Intent(this, SettingsActivity.class));
                 return true;
             }
             return false;

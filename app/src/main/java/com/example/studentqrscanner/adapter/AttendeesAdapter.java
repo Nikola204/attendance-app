@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -51,13 +52,15 @@ public class AttendeesAdapter extends RecyclerView.Adapter<AttendeesAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AttendanceItem item = items.get(position);
-        holder.tvName.setText(item.getStudentName());
-        
-        String details = item.getStudentIndex();
-        if (item.getTimestamp() != null && !item.getTimestamp().isEmpty()) {
-            details += "  (" + item.getTimestamp() + ")";
+        String fullName = item.getStudentName();
+        String displayName = !TextUtils.isEmpty(fullName) ? fullName : "Nepoznati student";
+        if (!TextUtils.isEmpty(item.getStudentIndex())) {
+            displayName = displayName + " - " + item.getStudentIndex();
         }
-        holder.tvIndex.setText(details);
+        holder.tvName.setText(displayName);
+
+        String date = item.getTimestamp();
+        holder.tvIndex.setText(!TextUtils.isEmpty(date) ? date : "");
 
         holder.btnDelete.setOnClickListener(v -> {
             if (deleteListener != null) {

@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.Kolegij;
@@ -13,6 +14,7 @@ import com.example.studentqrscanner.model.Predavanje;
 import com.example.studentqrscanner.model.Profesor;
 import com.example.studentqrscanner.model.Student;
 import com.example.studentqrscanner.model.UserRole;
+import com.example.studentqrscanner.model.StudentAttendance;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -26,6 +28,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +51,7 @@ public class SupabaseClient {
     private static final String STUDENTI_ENDPOINT = SUPABASE_URL + "/rest/v1/studenti";
     private static final String PROFESORI_ENDPOINT = SUPABASE_URL + "/rest/v1/profesori";
     private static final String KOLEGIJ_ENDPOINT = SUPABASE_URL + "/rest/v1/kolegij";
+    private static final String STUDENT_KOLEGIJ_ENDPOINT = SUPABASE_URL + "/rest/v1/student_kolegij";
 
     private final String PREDAVANJE_ENDPOINT = SUPABASE_URL + "/rest/v1/predavanja";
     private final String EVIDENCIJA_ENDPOINT = SUPABASE_URL + "/rest/v1/evidencija";
@@ -89,7 +96,7 @@ public class SupabaseClient {
         prefs.edit().putString("student_table_id", id).apply();
     }
 
-    private String getStudentTableId() {
+    public String getStudentTableId() {
         SharedPreferences prefs = context.getSharedPreferences("supabase_prefs", Context.MODE_PRIVATE);
         return prefs.getString("student_table_id", null);
     }
@@ -126,6 +133,16 @@ public class SupabaseClient {
 
     public interface AttendanceListCallback {
         void onSuccess(List<com.example.studentqrscanner.model.AttendanceItem> items);
+        void onError(String error);
+    }
+
+    public interface AttendanceRecordsCallback {
+        void onSuccess(List<com.example.studentqrscanner.model.AttendanceRecord> records);
+        void onError(String error);
+    }
+
+    public interface StudentAttendanceCallback {
+        void onSuccess(List<StudentAttendance> items);
         void onError(String error);
     }
 
@@ -177,13 +194,13 @@ public class SupabaseClient {
                     getUserProfile(accessToken, callback);
                 } else {
                     JSONObject errorResponse = new JSONObject(response.toString());
-                    String errorMsg = errorResponse.optString("error_description", "Greska pri loginu");
+                    String errorMsg = errorResponse.optString("error_description", "Greška pri loginu");
                     postError(callback, errorMsg);
                 }
             } catch (Exception e) {
                 new Handler(Looper.getMainLooper()).post(() -> callback.onError("Sustav: " + e.getMessage()));
                 e.printStackTrace();
-                postError(callback, "Greska pri konekciji: " + e.getMessage());
+                postError(callback, "Greška pri konekciji: " + e.getMessage());
             }
         });
     }
@@ -290,36 +307,14 @@ public class SupabaseClient {
                     reader.close();
 
                     String jsonResponse = response.toString();
-
                     android.util.Log.d("SUPABASE_ODGOVOR", "Sirovi JSON iz baze: " + jsonResponse);
 
-                    java.util.List<Kolegij> listaKolegija = new java.util.ArrayList<>();
-                    org.json.JSONArray jsonArray = new org.json.JSONArray(jsonResponse);
-
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        try{
-                            org.json.JSONObject obj = jsonArray.getJSONObject(i);
-
-                            String naziv = obj.optString("naziv", "");
-                            String studij = obj.optString("studij", "");
-                            String profId = obj.optString("profesor_id", "");
-                            String id = obj.optString("id", null);
-
-                            int godina = obj.optInt("godina", 0);
-
-                            Kolegij k = new Kolegij(naziv, godina, studij, profId);
-                            k.setId(id);
-
-                            listaKolegija.add(k);
-
-                            android.util.Log.d("SUPABASE_OBRADA", "Uspješno dodan kolegij: " + naziv + " sa ID: " + id);
-                        } catch (Exception e)
-                        {
-                            android.util.Log.e("JSON_ERROR", "Greška pri čitanju pojedinog kolegija: " + e.getMessage());
-                        }
-                    }
+                    List<Kolegij> listaKolegija = parseKolegijArray(jsonResponse);
                     new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(listaKolegija));
                 } else {
+                    if (handleAuthExpired(responseCode, null, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
                     new Handler(Looper.getMainLooper()).post(() -> callback.onError("Greška: " + responseCode));
                 }
             } catch (Exception e) {
@@ -619,8 +614,7 @@ public class SupabaseClient {
                 String datum = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
 
                 JSONObject payload = new JSONObject();
-                // If evidencija.id has FK to predavanja.id, set it explicitly; keep predavanje_id for schemas that use it.
-                payload.put("id", predavanjeId);
+                // Do not force id to predavanjeId; let DB generate unique id so multiple students can be inserted.
                 payload.put("predavanje_id", predavanjeId);
                 payload.put("student_id", studentId);
                 payload.put("datum", datum);
@@ -645,7 +639,10 @@ public class SupabaseClient {
                     Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
                     String err = s.hasNext() ? s.next() : "Nepoznata greska";
                     String parsed = parseErrorMessage(err);
-                    mainHandler.post(() -> callback.onError("Greska " + code + ": " + parsed));
+                    if (handleAuthExpired(code, parsed, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    mainHandler.post(() -> callback.onError("Greška " + code + ": " + parsed));
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
@@ -673,7 +670,7 @@ public class SupabaseClient {
                 String datum = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
 
                 JSONObject payload = new JSONObject();
-                payload.put("id", predavanjeId);
+                // Do not set id manually; allow multiple students per lecture.
                 payload.put("predavanje_id", predavanjeId);
                 payload.put("student_id", studentId);
                 payload.put("datum", datum);
@@ -698,7 +695,10 @@ public class SupabaseClient {
                     Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
                     String err = s.hasNext() ? s.next() : "Nepoznata greska";
                     String parsed = parseErrorMessage(err);
-                    mainHandler.post(() -> callback.onError("Greska " + code + ": " + parsed));
+                    if (handleAuthExpired(code, parsed, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    mainHandler.post(() -> callback.onError("Greška " + code + ": " + parsed));
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
@@ -719,12 +719,9 @@ public class SupabaseClient {
                     return;
                 }
 
-                // select=id,datum,studenti(ime,prezime,broj_indexa) from evidencija where predavanje_id=...
-                // URL encoding for select value: *,studenti(ime,prezime,broj_indexa)
-                String selectQuery = "id,datum,studenti(ime,prezime,broj_indexa)";
-                String encodedSelect = URLEncoder.encode(selectQuery, StandardCharsets.UTF_8.toString());
-                
-                String urlString = EVIDENCIJA_ENDPOINT + "?predavanje_id=eq." + predavanjeId + "&select=" + encodedSelect;
+                // Step 1: fetch attendance rows (id, datum, student_id) for this lecture.
+                String selectQuery = URLEncoder.encode("id,datum,student_id", StandardCharsets.UTF_8.toString());
+                String urlString = EVIDENCIJA_ENDPOINT + "?predavanje_id=eq." + predavanjeId + "&select=" + selectQuery;
                 URL url = new URL(urlString);
 
                 conn = (HttpURLConnection) url.openConnection();
@@ -738,30 +735,570 @@ public class SupabaseClient {
                     String response = s.hasNext() ? s.next() : "[]";
 
                     List<com.example.studentqrscanner.model.AttendanceItem> items = new ArrayList<>();
-                    JSONArray array = new JSONArray(response);
+                    JSONArray rawArray = new JSONArray(response);
 
-                    for (int i = 0; i < array.length(); i++) {
-                        JSONObject obj = array.getJSONObject(i);
+                    List<JSONObject> rawRows = new ArrayList<>();
+                    Set<String> studentIds = new HashSet<>();
+
+                    for (int i = 0; i < rawArray.length(); i++) {
+                        JSONObject obj = rawArray.getJSONObject(i);
+                        rawRows.add(obj);
+                        String sid = obj.optString("student_id", "");
+                        if (sid != null && !sid.trim().isEmpty()) {
+                            studentIds.add(sid.trim());
+                        }
+                    }
+
+                    Map<String, JSONObject> students = fetchStudentsByIds(studentIds);
+
+                    for (JSONObject obj : rawRows) {
                         String id = obj.optString("id");
                         String date = obj.optString("datum"); // e.g., 2026-01-24
+                        String sid = obj.optString("student_id", "");
 
-                        JSONObject studentObj = obj.optJSONObject("studenti");
+                        JSONObject studentObj = students.get(sid);
                         String ime = "", prezime = "", index = "";
-                        
+
                         if (studentObj != null) {
                             ime = studentObj.optString("ime", "");
                             prezime = studentObj.optString("prezime", "");
                             index = studentObj.optString("broj_indexa", "");
                         }
 
-                        String fullName = ime + " " + prezime;
-
-                        items.add(new com.example.studentqrscanner.model.AttendanceItem(id, fullName, index, date));
+                        items.add(new com.example.studentqrscanner.model.AttendanceItem(id, ime, prezime, index, date));
                     }
 
                     mainHandler.post(() -> callback.onSuccess(items));
                 } else {
                     mainHandler.post(() -> callback.onError("Greška " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void getAllEvidencije(AttendanceRecordsCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                String selectQuery = URLEncoder.encode("id,datum,predavanje_id,student_id", StandardCharsets.UTF_8.toString());
+                String urlString = EVIDENCIJA_ENDPOINT + "?select=" + selectQuery;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    JSONArray rawArray = new JSONArray(response);
+                    List<JSONObject> rawRows = new ArrayList<>();
+                    Set<String> studentIds = new HashSet<>();
+                    Set<String> predavanjeIds = new HashSet<>();
+
+                    for (int i = 0; i < rawArray.length(); i++) {
+                        JSONObject obj = rawArray.getJSONObject(i);
+                        rawRows.add(obj);
+
+                        String sid = obj.optString("student_id", "");
+                        if (sid != null && !sid.trim().isEmpty()) {
+                            studentIds.add(sid.trim());
+                        }
+
+                        String pid = obj.optString("predavanje_id", "");
+                        if (pid != null && !pid.trim().isEmpty()) {
+                            predavanjeIds.add(pid.trim());
+                        }
+                    }
+
+                    Map<String, JSONObject> students = fetchStudentsByIds(studentIds);
+                    Map<String, JSONObject> predavanja = fetchPredavanjaByIds(predavanjeIds);
+
+                    List<com.example.studentqrscanner.model.AttendanceRecord> items = new ArrayList<>();
+                    for (JSONObject obj : rawRows) {
+                        String id = obj.optString("id");
+                        String date = obj.optString("datum");
+                        String sid = obj.optString("student_id", "");
+                        String pid = obj.optString("predavanje_id", "");
+
+                        JSONObject studentObj = students.get(sid);
+                        JSONObject predavanjeObj = predavanja.get(pid);
+
+                        String lectureTitle = "";
+                        String lectureRoom = "";
+                        String lectureDate = date;
+                        if (predavanjeObj != null) {
+                            lectureTitle = predavanjeObj.optString("naslov", "");
+                            lectureRoom = predavanjeObj.optString("ucionica", "");
+                            String pd = predavanjeObj.optString("datum", "");
+                            if (pd != null && !pd.trim().isEmpty()) {
+                                lectureDate = pd;
+                            }
+                        }
+
+                        String studentIndex = "";
+                        String studentFullName = "";
+                        if (studentObj != null) {
+                            studentIndex = studentObj.optString("broj_indexa", "");
+                            String ime = studentObj.optString("ime", "");
+                            String prezime = studentObj.optString("prezime", "");
+                            studentFullName = (ime + " " + prezime).trim();
+                        }
+
+                        String combinedRoom = lectureRoom;
+
+                        java.util.Date parsed = null;
+                        try {
+                            parsed = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(lectureDate);
+                        } catch (Exception ignored) { }
+
+                        String day = "";
+                        String month = "";
+                        if (parsed != null) {
+                            day = new java.text.SimpleDateFormat("dd", java.util.Locale.getDefault()).format(parsed);
+                            month = new java.text.SimpleDateFormat("MMM", java.util.Locale.getDefault()).format(parsed).toUpperCase(java.util.Locale.getDefault());
+                        }
+
+                        // time field reused to carry index to the UI; subject shows lecture title; room field carries classroom only.
+                        com.example.studentqrscanner.model.AttendanceRecord record =
+                                new com.example.studentqrscanner.model.AttendanceRecord(
+                                        lectureTitle,
+                                        day,
+                                        month,
+                                        buildStudentLabel(studentFullName, studentIndex),
+                                        combinedRoom,
+                                        true
+                                );
+                        items.add(record);
+                    }
+
+                    mainHandler.post(() -> callback.onSuccess(items));
+                } else {
+                    mainHandler.post(() -> callback.onError("GreÅ¡ka " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void getAllKolegiji(KolegijiCallback callback) {
+        executor.execute(() -> {
+            try {
+                URL url = new URL(KOLEGIJ_ENDPOINT + "?select=*");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) response.append(line);
+                    reader.close();
+
+                    List<Kolegij> listaKolegija = parseKolegijArray(response.toString());
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onSuccess(listaKolegija));
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() -> callback.onError("Greška: " + responseCode));
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() -> callback.onError(e.getMessage()));
+            }
+        });
+    }
+
+    public void getStudentAttendanceForKolegij(String kolegijId, List<String> predavanjeIds, StudentAttendanceCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (kolegijId == null || kolegijId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje kolegij ID."));
+                    return;
+                }
+
+                String encodedKolegijId = URLEncoder.encode(kolegijId, StandardCharsets.UTF_8.toString());
+                String urlString = STUDENT_KOLEGIJ_ENDPOINT + "?kolegij_id=eq." + encodedKolegijId;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code < 200 || code >= 300) {
+                    String err = "";
+                    try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                        err = s.hasNext() ? s.next() : "";
+                    } catch (Exception ignored) {}
+                    if (handleAuthExpired(code, err, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    String parsed = parseErrorMessage(err);
+                    mainHandler.post(() -> callback.onError("Greška: " + (parsed.isEmpty() ? code : parsed)));
+                    return;
+                }
+
+                String response = "";
+                try (Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A")) {
+                    response = s.hasNext() ? s.next() : "[]";
+                }
+
+                JSONArray arr = new JSONArray(response);
+                Set<String> studentIds = new HashSet<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    String sid = obj.optString("student_id", "");
+                    if (sid != null && !sid.trim().isEmpty()) {
+                        studentIds.add(sid.trim());
+                    }
+                }
+
+                Map<String, JSONObject> studentsMap = fetchStudentsByIds(studentIds);
+
+                Map<String, Integer> attendanceCounts = new HashMap<>();
+                if (predavanjeIds != null && !predavanjeIds.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String id : predavanjeIds) {
+                        if (id == null || id.trim().isEmpty()) continue;
+                        if (sb.length() > 0) sb.append(",");
+                        sb.append(id.trim());
+                    }
+
+                    if (sb.length() > 0) {
+                        HttpURLConnection evConn = null;
+                        try {
+                            String evidUrl = EVIDENCIJA_ENDPOINT + "?predavanje_id=in.(" + sb + ")&select=student_id";
+                            URL eUrl = new URL(evidUrl);
+                            evConn = (HttpURLConnection) eUrl.openConnection();
+                            evConn.setRequestMethod("GET");
+                            evConn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                            evConn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                            int evCode = evConn.getResponseCode();
+                            if (evCode >= 200 && evCode < 300) {
+                                String evResp = "";
+                                try (Scanner s = new Scanner(evConn.getInputStream()).useDelimiter("\\A")) {
+                                    evResp = s.hasNext() ? s.next() : "[]";
+                                }
+
+                                JSONArray evArr = new JSONArray(evResp);
+                                for (int i = 0; i < evArr.length(); i++) {
+                                    JSONObject obj = evArr.getJSONObject(i);
+                                    String sid = obj.optString("student_id", "");
+                                    if (sid != null && !sid.trim().isEmpty()) {
+                                        String key = sid.trim();
+                                        attendanceCounts.put(key, attendanceCounts.getOrDefault(key, 0) + 1);
+                                    }
+                                }
+                            } else {
+                                String err = "";
+                                try (Scanner s = new Scanner(evConn.getErrorStream()).useDelimiter("\\A")) {
+                                    err = s.hasNext() ? s.next() : "";
+                                } catch (Exception ignored) {}
+                                if (handleAuthExpired(evCode, err, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                                    return;
+                                }
+                                String parsed = parseErrorMessage(err);
+                                mainHandler.post(() -> callback.onError("Greška: " + (parsed.isEmpty() ? evCode : parsed)));
+                                return;
+                            }
+                        } finally {
+                            if (evConn != null) evConn.disconnect();
+                        }
+                    }
+                }
+
+                List<StudentAttendance> result = new ArrayList<>();
+                for (String sid : studentIds) {
+                    JSONObject sObj = studentsMap.get(sid);
+                    String ime = "";
+                    String prezime = "";
+                    String index = "";
+                    if (sObj != null) {
+                        ime = sObj.optString("ime", "");
+                        prezime = sObj.optString("prezime", "");
+                        index = sObj.optString("broj_indexa", "");
+                    }
+                    int count = attendanceCounts.getOrDefault(sid, 0);
+                    result.add(new StudentAttendance(sid, ime, prezime, index, count));
+                }
+
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void getEvidencijeForStudent(String studentId, AttendanceRecordsCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (studentId == null || studentId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID studenta"));
+                    return;
+                }
+
+                String selectQuery = URLEncoder.encode("id,datum,predavanje_id,student_id", StandardCharsets.UTF_8.toString());
+                String urlString = EVIDENCIJA_ENDPOINT + "?student_id=eq." + studentId + "&select=" + selectQuery;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    JSONArray rawArray = new JSONArray(response);
+                    List<JSONObject> rawRows = new ArrayList<>();
+                    Set<String> studentIds = new HashSet<>();
+                    Set<String> predavanjeIds = new HashSet<>();
+
+                    for (int i = 0; i < rawArray.length(); i++) {
+                        JSONObject obj = rawArray.getJSONObject(i);
+                        rawRows.add(obj);
+
+                        String sid = obj.optString("student_id", "");
+                        if (sid != null && !sid.trim().isEmpty()) {
+                            studentIds.add(sid.trim());
+                        }
+
+                        String pid = obj.optString("predavanje_id", "");
+                        if (pid != null && !pid.trim().isEmpty()) {
+                            predavanjeIds.add(pid.trim());
+                        }
+                    }
+
+                    Map<String, JSONObject> students = fetchStudentsByIds(studentIds);
+                    Map<String, JSONObject> predavanja = fetchPredavanjaByIds(predavanjeIds);
+
+                    List<com.example.studentqrscanner.model.AttendanceRecord> items = new ArrayList<>();
+                    for (JSONObject obj : rawRows) {
+                        String date = obj.optString("datum");
+                        String sid = obj.optString("student_id", "");
+                        String pid = obj.optString("predavanje_id", "");
+
+                        JSONObject studentObj = students.get(sid);
+                        JSONObject predavanjeObj = predavanja.get(pid);
+
+                        String lectureTitle = "";
+                        String lectureRoom = "";
+                        String lectureDate = date;
+                        if (predavanjeObj != null) {
+                            lectureTitle = predavanjeObj.optString("naslov", "");
+                            lectureRoom = predavanjeObj.optString("ucionica", "");
+                            String pd = predavanjeObj.optString("datum", "");
+                            if (pd != null && !pd.trim().isEmpty()) {
+                                lectureDate = pd;
+                            }
+                        }
+
+                        String studentIndex = "";
+                        String studentFullName = "";
+                        if (studentObj != null) {
+                            studentIndex = studentObj.optString("broj_indexa", "");
+                            String ime = studentObj.optString("ime", "");
+                            String prezime = studentObj.optString("prezime", "");
+                            studentFullName = (ime + " " + prezime).trim();
+                        }
+
+                        String combinedRoom = lectureRoom;
+
+                        java.util.Date parsed = null;
+                        try {
+                            parsed = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(lectureDate);
+                        } catch (Exception ignored) { }
+
+                        String day = "";
+                        String month = "";
+                        if (parsed != null) {
+                            day = new java.text.SimpleDateFormat("dd", java.util.Locale.getDefault()).format(parsed);
+                            month = new java.text.SimpleDateFormat("MMM", java.util.Locale.getDefault()).format(parsed).toUpperCase(java.util.Locale.getDefault());
+                        }
+
+                        com.example.studentqrscanner.model.AttendanceRecord record =
+                                new com.example.studentqrscanner.model.AttendanceRecord(
+                                        lectureTitle,
+                                        day,
+                                        month,
+                                        buildStudentLabel(studentFullName, studentIndex),
+                                        combinedRoom,
+                                        true
+                                );
+                        items.add(record);
+                    }
+
+                    mainHandler.post(() -> callback.onSuccess(items));
+                } else {
+                    mainHandler.post(() -> callback.onError("Greška " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void getKolegijiForStudent(String studentId, KolegijiCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (studentId == null || studentId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje ID studenta"));
+                    return;
+                }
+
+                String urlString = STUDENT_KOLEGIJ_ENDPOINT + "?student_id=eq." + studentId + "&select=kolegij_id";
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                    String response = s.hasNext() ? s.next() : "[]";
+
+                    Set<String> kolegijIds = new HashSet<>();
+                    JSONArray arr = new JSONArray(response);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject obj = arr.getJSONObject(i);
+                        String kid = obj.optString("kolegij_id", "");
+                        if (kid != null && !kid.trim().isEmpty()) {
+                            kolegijIds.add(kid.trim());
+                        }
+                    }
+
+                    List<Kolegij> lista = fetchKolegijiByIds(kolegijIds);
+                    mainHandler.post(() -> callback.onSuccess(lista));
+                } else {
+                    String err = "";
+                    try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                        err = s.hasNext() ? s.next() : "";
+                    } catch (Exception ignored) {}
+                    if (handleAuthExpired(code, err, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    mainHandler.post(() -> callback.onError("Greška: " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void addStudentToKolegij(String studentId, String kolegijId, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (studentId == null || studentId.trim().isEmpty() || kolegijId == null || kolegijId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje student ili kolegij ID."));
+                    return;
+                }
+
+                JSONObject payload = new JSONObject();
+                payload.put("student_id", studentId);
+                payload.put("kolegij_id", kolegijId);
+
+                URL url = new URL(STUDENT_KOLEGIJ_ENDPOINT);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+                conn.setRequestProperty("Prefer", "return=minimal, resolution=ignore-duplicates");
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    String err = "";
+                    try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                        err = s.hasNext() ? s.next() : "";
+                    } catch (Exception ignored) {}
+                    if (handleAuthExpired(code, err, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    mainHandler.post(() -> callback.onError("Greška: " + code));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    public void removeStudentFromKolegij(String studentId, String kolegijId, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                if (studentId == null || studentId.trim().isEmpty() || kolegijId == null || kolegijId.trim().isEmpty()) {
+                    mainHandler.post(() -> callback.onError("Nedostaje student ili kolegij ID."));
+                    return;
+                }
+
+                String urlString = STUDENT_KOLEGIJ_ENDPOINT + "?student_id=eq." + studentId + "&kolegij_id=eq." + kolegijId;
+                URL url = new URL(urlString);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("DELETE");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    String err = "";
+                    try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                        err = s.hasNext() ? s.next() : "";
+                    } catch (Exception ignored) {}
+                    if (handleAuthExpired(code, err, () -> callback.onError("Sesija je istekla. Prijavite se ponovo."))) {
+                        return;
+                    }
+                    mainHandler.post(() -> callback.onError("Greška: " + code));
                 }
             } catch (Exception e) {
                 mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
@@ -800,6 +1337,168 @@ public class SupabaseClient {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private Map<String, JSONObject> fetchStudentsByIds(Set<String> studentIds) {
+        Map<String, JSONObject> result = new HashMap<>();
+        if (studentIds == null || studentIds.isEmpty()) {
+            return result;
+        }
+
+        HttpURLConnection conn = null;
+        try {
+            String inList = String.join(",", studentIds);
+            String urlString = STUDENTI_ENDPOINT + "?id=in.(" + inList + ")&select=id,ime,prezime,broj_indexa";
+            URL url = new URL(urlString);
+
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                String resp = s.hasNext() ? s.next() : "[]";
+
+                JSONArray arr = new JSONArray(resp);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    String id = obj.optString("id", "");
+                    if (id != null && !id.trim().isEmpty()) {
+                        result.put(id.trim(), obj);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return result;
+    }
+
+    private Map<String, JSONObject> fetchPredavanjaByIds(Set<String> predavanjeIds) {
+        Map<String, JSONObject> result = new HashMap<>();
+        if (predavanjeIds == null || predavanjeIds.isEmpty()) {
+            return result;
+        }
+
+        HttpURLConnection conn = null;
+        try {
+            String inList = String.join(",", predavanjeIds);
+            String urlString = PREDAVANJE_ENDPOINT + "?id=in.(" + inList + ")&select=id,naslov,opis,ucionica,datum";
+            URL url = new URL(urlString);
+
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                String resp = s.hasNext() ? s.next() : "[]";
+
+                JSONArray arr = new JSONArray(resp);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    String id = obj.optString("id", "");
+                    if (id != null && !id.trim().isEmpty()) {
+                        result.put(id.trim(), obj);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return result;
+    }
+
+    private List<Kolegij> fetchKolegijiByIds(Set<String> kolegijIds) {
+        List<Kolegij> lista = new ArrayList<>();
+        if (kolegijIds == null || kolegijIds.isEmpty()) return lista;
+
+        HttpURLConnection conn = null;
+        try {
+            String inList = String.join(",", kolegijIds);
+            String urlString = KOLEGIJ_ENDPOINT + "?id=in.(" + inList + ")&select=*";
+            URL url = new URL(urlString);
+
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                Scanner s = new Scanner(conn.getInputStream()).useDelimiter("\\A");
+                String resp = s.hasNext() ? s.next() : "[]";
+                lista = parseKolegijArray(resp);
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return lista;
+    }
+
+    private List<Kolegij> parseKolegijArray(String jsonResponse) {
+        List<Kolegij> listaKolegija = new ArrayList<>();
+        try {
+            JSONArray jsonArray = new JSONArray(jsonResponse);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                try {
+                    JSONObject obj = jsonArray.getJSONObject(i);
+
+                    String naziv = obj.optString("naziv", "");
+                    String studij = obj.optString("studij", "");
+                    String profId = obj.optString("profesor_id", "");
+                    String id = obj.optString("id", null);
+                    int godina = obj.optInt("godina", 0);
+
+                    Kolegij k = new Kolegij(naziv, godina, studij, profId);
+                    k.setId(id);
+                    k.setCreatedAt(obj.optString("created_at", null));
+
+                    listaKolegija.add(k);
+                } catch (Exception ignored) { }
+            }
+        } catch (Exception ignored) { }
+        return listaKolegija;
+    }
+
+    private String buildStudentLabel(String fullName, String index) {
+        StringBuilder sb = new StringBuilder();
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            sb.append(fullName.trim());
+        }
+        if (index != null && !index.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(" - ");
+            sb.append(index.trim());
+        }
+        return sb.toString();
+    }
+
+    private boolean handleAuthExpired(int code, String rawError, Runnable onUnauthorized) {
+        String lowered = rawError != null ? rawError.toLowerCase(Locale.US) : "";
+        boolean expired = code == 401
+                || lowered.contains("jwt expired")
+                || lowered.contains("token expired")
+                || lowered.contains("invalid token")
+                || lowered.contains("invalid jwt");
+        if (expired) {
+            signOut();
+            Handler mainHandler = new Handler(Looper.getMainLooper());
+            mainHandler.post(() -> {
+                Toast.makeText(context, "Sesija je istekla. Prijavite se ponovo.", Toast.LENGTH_LONG).show();
+                if (onUnauthorized != null) {
+                    onUnauthorized.run();
+                }
+            });
+            return true;
+        }
+        return false;
     }
 
     private String parseErrorMessage(String raw) {

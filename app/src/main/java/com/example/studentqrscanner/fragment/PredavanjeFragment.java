@@ -19,8 +19,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
+import com.example.studentqrscanner.adapter.StudentAttendanceAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
+import com.example.studentqrscanner.model.StudentAttendance;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.zxing.BarcodeFormat;
@@ -43,6 +45,11 @@ public class PredavanjeFragment extends Fragment {
     private PredavanjeAdapter adapter;
     private Predavanje targetPredavanjeForScan;
     private boolean scanningStudent = false;
+    private TextView tvNoPredavanja;
+    private RecyclerView rvStudenti;
+    private StudentAttendanceAdapter studentiAdapter;
+    private TextView tvNoStudenti;
+    private final List<Predavanje> currentPredavanja = new ArrayList<>();
 
     private SupabaseClient supabaseClient;
 
@@ -65,9 +72,19 @@ public class PredavanjeFragment extends Fragment {
 
         rvPredavanja = view.findViewById(R.id.rvPredavanja);
         rvPredavanja.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvPredavanja.setNestedScrollingEnabled(false);
+        tvNoPredavanja = view.findViewById(R.id.tvNoPredavanja);
+
+        rvStudenti = view.findViewById(R.id.rvStudenti);
+        rvStudenti.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvStudenti.setNestedScrollingEnabled(false);
+        tvNoStudenti = view.findViewById(R.id.tvNoStudenti);
 
         adapter = new PredavanjeAdapter(new ArrayList<>(), this::prikaziQrDialog);
         rvPredavanja.setAdapter(adapter);
+
+        studentiAdapter = new StudentAttendanceAdapter(new ArrayList<>());
+        rvStudenti.setAdapter(studentiAdapter);
 
         dohvatiPodatke();
 
@@ -154,7 +171,20 @@ public class PredavanjeFragment extends Fragment {
             @Override
             public void onSuccess(List<Predavanje> predavanja) {
                 if (isAdded() && getActivity() != null) {
-                    getActivity().runOnUiThread(() -> adapter.updateData(predavanja));
+                    getActivity().runOnUiThread(() -> {
+                        currentPredavanja.clear();
+                        if (predavanja != null) {
+                            currentPredavanja.addAll(predavanja);
+                        }
+                        adapter.updateData(predavanja);
+                        if (tvNoPredavanja != null) {
+                            boolean empty = predavanja == null || predavanja.isEmpty();
+                            tvNoPredavanja.setVisibility(empty ? View.VISIBLE : View.GONE);
+                            tvNoPredavanja.setText(R.string.predavanja_empty);
+                            rvPredavanja.setVisibility(empty ? View.GONE : View.VISIBLE);
+                        }
+                        dohvatiStudenteSaEvidencijom();
+                    });
                 }
             }
 
@@ -183,7 +213,6 @@ public class PredavanjeFragment extends Fragment {
         TextView tvWindow = dialogView.findViewById(R.id.tvQrWindow);
         TextView tvStatus = dialogView.findViewById(R.id.tvQrStatus);
         ImageView ivQr = dialogView.findViewById(R.id.ivPredavanjeQr);
-        ImageView ivQr = dialogView.findViewById(R.id.ivPredavanjeQr);
         ImageButton btnScanStudent = dialogView.findViewById(R.id.btnScanStudent);
         ImageButton btnViewAttendees = dialogView.findViewById(R.id.btnViewAttendees);
 
@@ -192,9 +221,9 @@ public class PredavanjeFragment extends Fragment {
         Date startDate = parseDatum(predavanje.getDatum());
         SimpleDateFormat displayFormat = new SimpleDateFormat("dd.MM.yyyy. HH:mm", Locale.getDefault());
         if (startDate != null) {
-            tvWindow.setText("Početak: " + displayFormat.format(startDate));
+            tvWindow.setText(getString(R.string.qr_dialog_start, displayFormat.format(startDate)));
         } else {
-            tvWindow.setText("Vrijeme početka nije dostupno.");
+            tvWindow.setText(R.string.qr_dialog_start_unavailable);
         }
 
         String qrPayload = buildQrPayload(predavanje);
@@ -202,9 +231,9 @@ public class PredavanjeFragment extends Fragment {
         if (bitmap != null) {
             ivQr.setImageBitmap(bitmap);
             ivQr.setVisibility(View.VISIBLE);
-            tvStatus.setText("QR spreman za skeniranje.");
+            tvStatus.setText(R.string.qr_dialog_ready);
         } else {
-            tvStatus.setText("Greska pri generisanju QR koda.");
+            tvStatus.setText(R.string.qr_dialog_generate_error);
             ivQr.setVisibility(View.GONE);
         }
 
@@ -285,7 +314,7 @@ public class PredavanjeFragment extends Fragment {
         scanningStudent = true;
         IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt("Skeniraj QR studenta");
+        integrator.setPrompt(getString(R.string.qr_fragment_prompt_student));
         integrator.setBeepEnabled(true);
         integrator.setOrientationLocked(true);
         integrator.setCaptureActivity(PortraitCaptureActivity.class);
@@ -327,11 +356,11 @@ public class PredavanjeFragment extends Fragment {
                 @Override
                 public void onError(String error) {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Student nije pronaden: " + error, Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), "Student nije pronađen: " + error, Toast.LENGTH_LONG).show();
                 }
             });
         } else {
-            Toast.makeText(requireContext(), "QR ne sadrzi podatke o studentu.", Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), "QR ne sadrži podatke o studentu.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -353,6 +382,38 @@ public class PredavanjeFragment extends Fragment {
             public void onError(String error) {
                 if (!isAdded()) return;
                 Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void dohvatiStudenteSaEvidencijom() {
+        List<String> predavanjeIds = new ArrayList<>();
+        for (Predavanje p : currentPredavanja) {
+            if (p != null && p.getId() != null && !p.getId().trim().isEmpty()) {
+                predavanjeIds.add(p.getId().trim());
+            }
+        }
+
+        supabaseClient.getStudentAttendanceForKolegij(kolegijId, predavanjeIds, new SupabaseClient.StudentAttendanceCallback() {
+            @Override
+            public void onSuccess(List<StudentAttendance> items) {
+                if (!isAdded() || getActivity() == null) return;
+                getActivity().runOnUiThread(() -> {
+                    studentiAdapter.updateData(items);
+                    boolean empty = items == null || items.isEmpty();
+                    if (tvNoStudenti != null) {
+                        tvNoStudenti.setVisibility(empty ? View.VISIBLE : View.GONE);
+                    }
+                    if (rvStudenti != null) {
+                        rvStudenti.setVisibility(empty ? View.GONE : View.VISIBLE);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
             }
         });
     }

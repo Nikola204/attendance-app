@@ -2,13 +2,15 @@ package com.example.studentqrscanner.model;
 
 public class AttendanceItem {
     private String evidencijaId;
-    private String studentName;
+    private String studentFirstName;
+    private String studentLastName;
     private String studentIndex;
     private String timestamp;
 
-    public AttendanceItem(String evidencijaId, String studentName, String studentIndex, String timestamp) {
+    public AttendanceItem(String evidencijaId, String studentFirstName, String studentLastName, String studentIndex, String timestamp) {
         this.evidencijaId = evidencijaId;
-        this.studentName = studentName;
+        this.studentFirstName = studentFirstName;
+        this.studentLastName = studentLastName;
         this.studentIndex = studentIndex;
         this.timestamp = timestamp;
     }
@@ -18,7 +20,18 @@ public class AttendanceItem {
     }
 
     public String getStudentName() {
-        return studentName;
+        String first = studentFirstName != null ? studentFirstName : "";
+        String last = studentLastName != null ? studentLastName : "";
+        String combined = (first + " " + last).trim();
+        return combined.isEmpty() ? first + last : combined;
+    }
+
+    public String getStudentFirstName() {
+        return studentFirstName;
+    }
+
+    public String getStudentLastName() {
+        return studentLastName;
     }
 
     public String getStudentIndex() {

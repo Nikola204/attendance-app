@@ -17,8 +17,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="QR kod predavanja"
-            android:textColor="#212121"
+            android:text="@string/qr_dialog_title"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -27,10 +27,10 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Popis prisutnih"
+            android:contentDescription="@string/qr_dialog_attendees_cd"
             android:padding="6dp"
             android:src="@drawable/ic_analytics"
-            android:tint="#4CAF50"
+            android:tint="#2196F3"
             android:layout_marginEnd="8dp"/>
 
         <ImageButton
@@ -38,7 +38,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Skeniraj studenta"
+            android:contentDescription="@string/qr_dialog_scan_cd"
             android:padding="6dp"
             android:src="@drawable/ic_qr_square"
             android:tint="@color/moja_boja_kalendara" />
@@ -49,8 +49,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="Vrijedi od - do"
-        android:textColor="#757575"
+        android:text="@string/qr_dialog_window"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp" />
 
     <ImageView
@@ -66,9 +66,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="Status koda"
+        android:text="@string/qr_dialog_status"
         android:textAlignment="center"
-        android:textColor="#424242"
+        android:textColor="@color/text_secondary"
         android:textSize="14sp" />
 
 </LinearLayout>

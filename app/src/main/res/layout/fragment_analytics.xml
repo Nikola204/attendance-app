@@ -5,12 +5,23 @@
     android:orientation="vertical"
     android:background="#F5F5F5">
 
-
+    <TextView
+        android:id="@+id/tvNoAttendance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nema evidencija za prikaz"
+        android:textSize="16sp"
+        android:textColor="#757575"
+        android:gravity="center"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:layout_marginTop="12dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewHistory"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingTop="12dp"
         android:paddingBottom="80dp" />

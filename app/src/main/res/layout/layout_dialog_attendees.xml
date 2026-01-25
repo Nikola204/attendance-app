@@ -9,10 +9,10 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Prisutni studenti"
+        android:text="@string/attendees_title"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#000000"
+        android:textColor="@color/text_primary"
         android:layout_marginBottom="12dp"
         android:gravity="center_horizontal"/>
 
@@ -26,19 +26,19 @@
         android:id="@+id/tvNoAttendees"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Nema evidentiranih studenata."
+        android:text="@string/attendees_empty"
         android:gravity="center"
         android:padding="24dp"
         android:visibility="gone"
-        android:textColor="#757575"/>
+        android:textColor="@color/text_secondary"/>
 
     <Button
         android:id="@+id/btnCloseAttendees"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Zatvori"
+        android:text="@string/attendees_close"
         android:layout_marginTop="8dp"
         android:backgroundTint="#CCCCCC"
-        android:textColor="#000000"/>
+        android:textColor="@color/text_primary"/>
 
 </LinearLayout>
