@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -18,8 +19,8 @@ import com.example.studentqrscanner.activity.LoginActivity;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.util.Locale;
 
@@ -30,6 +31,20 @@ public class QrFragment extends Fragment {
 
     private boolean scanning = false;
     private boolean allowAutoStart = true;
+
+    // Modern Activity Result API
+    private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                scanning = false;
+                if (result.getContents() == null) {
+                    Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
+                    allowAutoStart = false;
+                } else {
+                    handleScanResult(result.getContents());
+                    allowAutoStart = false;
+                }
+            });
 
     @Nullable
     @Override
@@ -63,30 +78,17 @@ public class QrFragment extends Fragment {
     private void startScan() {
         if (scanning || !isAdded()) return;
         scanning = true;
-        IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt("Skeniraj QR kod");
-        integrator.setCameraId(0);
-        integrator.setBeepEnabled(true);
-        integrator.setOrientationLocked(true); // keep portrait
-        integrator.setCaptureActivity(PortraitCaptureActivity.class);
-        integrator.setBarcodeImageEnabled(false);
-        integrator.initiateScan();
-    }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        scanning = false;
-        allowAutoStart = false;
-        if (result != null) {
-            if (result.getContents() != null) {
-                handleScanResult(result.getContents());
-            } else {
-                Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
-            }
-        }
+        ScanOptions options = new ScanOptions();
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+        options.setPrompt("Skeniraj QR kod");
+        options.setCameraId(0);
+        options.setBeepEnabled(true);
+        options.setOrientationLocked(true);
+        options.setCaptureActivity(PortraitCaptureActivity.class);
+        options.setBarcodeImageEnabled(false);
+
+        barcodeLauncher.launch(options);
     }
 
     private void handleScanResult(String scanned) {

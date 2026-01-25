@@ -11,11 +11,13 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
@@ -29,8 +31,8 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -47,6 +49,20 @@ public class PredavanjeFragment extends Fragment {
     private boolean scanningStudent = false;
 
     private SupabaseClient supabaseClient;
+
+    // Modern Activity Result API za skeniranje studenta
+    private final ActivityResultLauncher<ScanOptions> studentScanLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                scanningStudent = false;
+                if (result.getContents() == null) {
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    handleStudentScanResult(result.getContents());
+                }
+            });
 
     @Nullable
     @Override
@@ -267,27 +283,15 @@ public class PredavanjeFragment extends Fragment {
         }
         if (scanningStudent) return;
         scanningStudent = true;
-        IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt("Skeniraj QR studenta");
-        integrator.setBeepEnabled(true);
-        integrator.setOrientationLocked(true);
-        integrator.setCaptureActivity(PortraitCaptureActivity.class);
-        integrator.initiateScan();
-    }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable android.content.Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        if (result != null) {
-            scanningStudent = false;
-            if (result.getContents() != null) {
-                handleStudentScanResult(result.getContents());
-            } else if (isAdded()) {
-                Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
-            }
-        }
+        ScanOptions options = new ScanOptions();
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+        options.setPrompt("Skeniraj QR studenta");
+        options.setBeepEnabled(true);
+        options.setOrientationLocked(true);
+        options.setCaptureActivity(PortraitCaptureActivity.class);
+
+        studentScanLauncher.launch(options);
     }
 
     private void handleStudentScanResult(String contents) {
