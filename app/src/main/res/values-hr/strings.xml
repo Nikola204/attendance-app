@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Attendance App</string>
+    <string name="login_title">Prijava</string>
+    <string name="email_hint">Email (@fsre.sum.ba)</string>
+    <string name="password_hint">Lozinka</string>
+    <string name="login_button">Prijavi se</string>
+    <string name="logout_button">Odjavi se</string>
+    <string name="welcome_message">Dobrodošli u Attendance App</string>
+    <string name="email_required">Email je obavezan</string>
+    <string name="password_required">Lozinka je obavezna</string>
+    <string name="invalid_email">Unesite valjan email</string>
+    <string name="invalid_domain">Email mora biti sa domene fsre.sum.ba</string>
+    <string name="password_min_length">Lozinka mora imati najmanje 6 znakova</string>
+    <string name="login_success">Uspješna prijava!</string>
+    <string name="login_error">Greška pri prijavi</string>
+
+    <!-- Top Navbar -->
+    <string name="logout">Odjavi se</string>
+    <string name="menu_description">Opcije</string>
+    <string name="predavanja_empty">Nema predavanja za prikaz</string>
+
+    <!-- Profile -->
+    <string name="profile_full_name">Ime i prezime</string>
+    <string name="profile_index_label">Broj indexa</string>
+    <string name="profile_study_label">Studij</string>
+    <string name="profile_year_label">Godina</string>
+    <string name="profile_my_courses">Moji kolegiji</string>
+    <string name="profile_no_courses">Niste upisani ni na jedan kolegij.</string>
+    <string name="profile_qr_title">Moj QR kod</string>
+    <string name="profile_qr_subtitle">Prikaži ovaj QR kod profesoru za evidentiranje prisustva</string>
+    <string name="profile_add_course">Dodaj kolegij</string>
+    <string name="profile_qr_content_desc">Student QR kod</string>
+    <string name="predavanje_students_title">Studenti</string>
+    <string name="predavanje_students_empty">Nema studenata za prikaz</string>
+    <string name="predavanje_attendance_count">Dolazaka: %1$d</string>
+</resources>

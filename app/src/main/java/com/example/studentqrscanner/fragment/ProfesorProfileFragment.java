@@ -81,7 +81,7 @@ public class ProfesorProfileFragment extends Fragment {
             public void onError(String error) {
                 if (!isAdded()) return;
                 showLoading(false);
-                Toast.makeText(requireContext(), "Greska: " + error, Toast.LENGTH_LONG).show();
+                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -103,7 +103,7 @@ public class ProfesorProfileFragment extends Fragment {
             @Override
             public void onError(String error) {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Greska kolegiji: " + error, Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Greška kolegiji: " + error, Toast.LENGTH_SHORT).show();
             }
         });
     }

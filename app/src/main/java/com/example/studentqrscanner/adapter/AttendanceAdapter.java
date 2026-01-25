@@ -34,14 +34,24 @@ public class AttendanceAdapter extends RecyclerView.Adapter<AttendanceAdapter.Vi
         AttendanceRecord record = records.get(position);
         holder.tvDateDay.setText(record.getDateDay());
         holder.tvDateMonth.setText(record.getDateMonth());
-        holder.tvSubject.setText(record.getSubject());
-        holder.tvTimeRoom.setText(record.getTime() + " | " + record.getRoom());
+        // Swap: top line shows index; bottom shows lecture title and room/time.
+        String idxOrTitle = record.getTime(); // currently using time field to carry index
+        if (idxOrTitle == null) idxOrTitle = "";
+        holder.tvSubject.setText(idxOrTitle);
 
-        if (record.isPresent()) {
-            holder.viewStatus.setBackgroundResource(R.drawable.shape_circle_green);
-        } else {
-            holder.viewStatus.setBackgroundResource(R.drawable.shape_circle_red);
+        StringBuilder details = new StringBuilder();
+        if (record.getSubject() != null && !record.getSubject().isEmpty()) {
+            details.append(record.getSubject());
         }
+        if (record.getRoom() != null && !record.getRoom().isEmpty()) {
+            if (details.length() > 0) {
+                details.append(" | ");
+            }
+            details.append(record.getRoom());
+        }
+        holder.tvTimeRoom.setText(details.toString());
+
+        holder.viewStatus.setVisibility(View.GONE);
     }
 
     @Override

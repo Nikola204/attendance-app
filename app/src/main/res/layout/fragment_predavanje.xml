@@ -5,40 +5,94 @@
     android:layout_height="match_parent"
     android:background="#F5F5F5">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:fillViewport="true"
+        android:padding="24dp"
+        android:clipToPadding="false">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Predavanja za kolegij:"
-            android:textSize="16sp"
-            android:textColor="#666666"
-            android:layout_marginTop="20dp" />
-
-        <TextView
-            android:id="@+id/tvNaslovKolegija"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Učitavanje..."
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#1976D2"
-            android:layout_marginTop="4dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvPredavanja"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="24dp"
-            android:clipToPadding="false"
-            android:paddingBottom="80dp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/predavanja_header"
+                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginTop="12dp" />
+
+            <TextView
+                android:id="@+id/tvNaslovKolegija"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/predavanja_loading"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_blue"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/tvNoPredavanja"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/predavanja_empty"
+                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:padding="12dp"
+                android:visibility="gone"
+                android:layout_marginTop="12dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPredavanja"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:clipToPadding="false"
+                android:paddingBottom="12dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="12dp"
+                android:background="#E5E5E5" />
+
+            <TextView
+                android:id="@+id/tvStudentSectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/predavanje_students_title"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/tvNoStudenti"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/predavanje_students_empty"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:gravity="center"
+                android:padding="12dp"
+                android:visibility="gone"
+                android:layout_marginTop="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvStudenti"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:paddingBottom="80dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabDodajPredavanje"

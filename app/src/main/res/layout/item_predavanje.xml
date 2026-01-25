@@ -26,8 +26,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Naziv predavanja"
-                android:textColor="#212121"
+                android:text="@string/item_predavanje_title"
+                android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -38,8 +38,8 @@
                 android:background="#F0F0F0"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp"
-                android:text="Učionica 101"
-                android:textColor="#616161"
+                android:text="@string/item_predavanje_room"
+                android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="italic" />
         </LinearLayout>
@@ -49,8 +49,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Ovdje ide kratki opis predavanja koji može biti u više redova ako je potrebno."
-            android:textColor="#757575"
+            android:text="@string/item_predavanje_desc"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <View
@@ -69,7 +69,7 @@
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:src="@android:drawable/ic_menu_my_calendar"
-                android:contentDescription="Calendar icon"
+                android:contentDescription="@string/item_predavanje_calendar"
                 app:tint="#9E9E9E" />
 
             <TextView
@@ -77,8 +77,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="18.01.2026. 19:54"
-                android:textColor="#9E9E9E"
+                android:text="@string/item_predavanje_date"
+                android:textColor="@color/text_secondary"
                 android:textSize="13sp" />
         </LinearLayout>
 
