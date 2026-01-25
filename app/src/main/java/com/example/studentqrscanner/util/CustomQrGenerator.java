@@ -110,11 +110,11 @@ public class CustomQrGenerator {
             // 1. Generiši osnovni QR kod
             Bitmap qrBitmap = generateBasicQr(content, style);
 
-            // 2. Dodaj logo u centar
-            Bitmap qrWithLogo = addLogoToCenter(qrBitmap, style);
+            // 2. Dodaj logo u centar - PRIVREMENO ONEMOGUĆENO ZA TESTIRANJE
+            // Bitmap qrWithLogo = addLogoToCenter(qrBitmap, style);
 
-            // 3. Dodaj border i label
-            Bitmap finalBitmap = addBorderAndLabel(qrWithLogo, style, labelText);
+            // 3. Dodaj border i label (bez loga)
+            Bitmap finalBitmap = addBorderAndLabel(qrBitmap, style, labelText);
 
             return finalBitmap;
 
@@ -263,8 +263,31 @@ public class CustomQrGenerator {
      */
     public static Bitmap generateStudentQr(Context context, String studentId, String index, String name) {
         String content = "studentId=" + studentId + "&index=" + index + "&name=" + name;
-        CustomQrGenerator generator = new CustomQrGenerator(context);
-        return generator.generateStyledQr(content, QrStyle.STUDENT_BLUE, "Student: " + index);
+
+        // PRIVREMENO: Generiši jednostavan QR bez stilova za testiranje
+        try {
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 600, 600);
+
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+
+            return bitmap;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        // Originalna verzija sa stilom
+        // CustomQrGenerator generator = new CustomQrGenerator(context);
+        // return generator.generateStyledQr(content, QrStyle.STUDENT_BLUE, "Student: " + index);
     }
 
     /**

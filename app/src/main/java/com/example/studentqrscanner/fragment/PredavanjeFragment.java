@@ -74,9 +74,15 @@ public class PredavanjeFragment extends Fragment {
             new ScanContract(),
             result -> {
                 scanningStudent = false;
+
+                // Debug: provjeri da li je scanner uopće pozvan
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Scanner vratio rezultat!", Toast.LENGTH_SHORT).show();
+                }
+
                 if (result.getContents() == null) {
                     if (isAdded()) {
-                        Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), "Skeniranje otkazano - nema sadržaja", Toast.LENGTH_LONG).show();
                     }
                 } else {
                     handleStudentScanResult(result.getContents());
@@ -315,6 +321,8 @@ public class PredavanjeFragment extends Fragment {
     }
 
     private void startStudentScanInternal() {
+        Toast.makeText(requireContext(), "Pokrećem scanner kamere...", Toast.LENGTH_SHORT).show();
+
         ScanOptions options = new ScanOptions();
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
         options.setPrompt("Skeniraj QR studenta");
@@ -331,6 +339,9 @@ public class PredavanjeFragment extends Fragment {
             Toast.makeText(requireContext(), "Nedostaje predavanje za evidenciju.", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        // Debug: prikaži što je skenirano
+        Toast.makeText(requireContext(), "Skenirano: " + contents, Toast.LENGTH_LONG).show();
 
         StudentScanData data = parseStudentScan(contents);
         if (data.studentId != null && !data.studentId.isEmpty()) {
@@ -382,9 +393,10 @@ public class PredavanjeFragment extends Fragment {
 
         String lower = raw.toLowerCase(Locale.US);
 
+        // Parsiranje studentId
         int idIndex = lower.indexOf("studentid=");
         if (idIndex >= 0) {
-            String idPart = raw.substring(idIndex + "studentId=".length());
+            String idPart = raw.substring(idIndex + "studentid=".length()); // FIX: koristi lowercase dužinu
             int ampIndex = idPart.indexOf("&");
             if (ampIndex >= 0) {
                 idPart = idPart.substring(0, ampIndex);
@@ -392,6 +404,7 @@ public class PredavanjeFragment extends Fragment {
             data.studentId = idPart.trim();
         }
 
+        // Parsiranje index
         int indexIndex = lower.indexOf("index=");
         if (indexIndex >= 0) {
             String idxPart = raw.substring(indexIndex + "index=".length());
@@ -401,7 +414,8 @@ public class PredavanjeFragment extends Fragment {
             }
             data.index = idxPart.trim();
         } else if (lower.contains("broj_indexa=")) {
-            String idxPart = raw.substring(lower.indexOf("broj_indexa=") + "broj_indexa=".length());
+            int brojIndexaIndex = lower.indexOf("broj_indexa=");
+            String idxPart = raw.substring(brojIndexaIndex + "broj_indexa=".length());
             int ampIndex = idxPart.indexOf("&");
             if (ampIndex >= 0) {
                 idxPart = idxPart.substring(0, ampIndex);
