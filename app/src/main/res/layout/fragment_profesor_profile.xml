@@ -64,5 +64,15 @@
             android:layout_marginTop="24dp"
             style="?android:attr/progressBarStyleLarge" />
 
+        <Button
+            android:id="@+id/btnDeleteAccount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Obriši račun"
+            android:textSize="13sp"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="32dp"
+            android:backgroundTint="#D32F2F" />
+
     </LinearLayout>
 </ScrollView>
