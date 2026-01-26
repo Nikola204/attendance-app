@@ -48,6 +48,7 @@ public class SupabaseClient {
     private static final String SUPABASE_ANON_KEY = "sb_publishable_cvBUkg_yYjkpRdf5D2VErg_KZ3fnj7V";
 
     private static final String AUTH_ENDPOINT = SUPABASE_URL + "/auth/v1/token?grant_type=password";
+    private static final String SIGNUP_ENDPOINT = SUPABASE_URL + "/auth/v1/signup";
     private static final String STUDENTI_ENDPOINT = SUPABASE_URL + "/rest/v1/studenti";
     private static final String PROFESORI_ENDPOINT = SUPABASE_URL + "/rest/v1/profesori";
     private static final String KOLEGIJ_ENDPOINT = SUPABASE_URL + "/rest/v1/kolegij";
@@ -205,6 +206,132 @@ public class SupabaseClient {
         });
     }
 
+    public void signUpUser(String email,
+                           String password,
+                           boolean isStudent,
+                           String ime,
+                           String prezime,
+                           String brojIndexa,
+                           String studij,
+                           Integer godina,
+                           AuthCallback callback) {
+        executor.execute(() -> {
+            try {
+                JSONObject payload = new JSONObject();
+                payload.put("email", email);
+                payload.put("password", password);
+
+                URL url = new URL(SIGNUP_ENDPOINT);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                BufferedReader reader;
+                if (code >= 200 && code < 300) {
+                    reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                } else {
+                    reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                }
+
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) response.append(line);
+                reader.close();
+
+                if (code >= 200 && code < 300) {
+                    String respStr = response.toString();
+                    if (respStr == null || respStr.trim().isEmpty()) {
+                        postError(callback, "Prazan odgovor pri registraciji");
+                        return;
+                    }
+                    JSONObject resp;
+                    try {
+                        resp = new JSONObject(respStr);
+                    } catch (Exception je) {
+                        postError(callback, "Nevaljan JSON odgovor: " + respStr);
+                        return;
+                    }
+
+                    String accessToken = resp.optString("access_token", null);
+                    JSONObject sessionObj = resp.optJSONObject("session");
+                    if (accessToken == null && sessionObj != null) {
+                        accessToken = sessionObj.optString("access_token", null);
+                    }
+
+                    JSONObject userObj = resp.optJSONObject("user");
+                    if (userObj == null && sessionObj != null) {
+                        userObj = sessionObj.optJSONObject("user");
+                    }
+                    String userId = userObj != null ? userObj.optString("id", null) : null;
+
+                    if (accessToken == null) {
+                        postError(callback, "Nedostaje access token (signup)");
+                        return;
+                    }
+                    if (userId == null || userId.trim().isEmpty()) {
+                        postError(callback, "Nedostaje user id (signup)");
+                        return;
+                    }
+
+                    saveAccessToken(accessToken);
+                    saveUserId(userId);
+
+                    String profileError;
+                    if (isStudent) {
+                        profileError = insertStudentProfile(userId, email, ime, prezime, brojIndexa, studij, godina, accessToken);
+                    } else {
+                        profileError = insertProfessorProfile(userId, email, ime, prezime, accessToken);
+                    }
+
+                    if (profileError != null) {
+                        postError(callback, "Greška pri spremanju profila: " + profileError);
+                        return;
+                    }
+
+                    if (isStudent) {
+                        saveStudentTableId(userId);
+                        Student student = new Student();
+                        student.setId(userId);
+                        student.setEmail(email);
+                        student.setIme(ime);
+                        student.setPrezime(prezime);
+                        student.setBrojIndexa(brojIndexa);
+                        student.setStudij(studij);
+                        student.setGodina(godina != null ? godina : 1);
+                        student.setRole(UserRole.STUDENT);
+                        postSuccess(callback, student);
+                    } else {
+                        Profesor profesor = new Profesor();
+                        profesor.setEmail(email);
+                        profesor.setIme(ime);
+                        profesor.setPrezime(prezime);
+                        profesor.setRole(UserRole.PROFESOR);
+                        postSuccess(callback, profesor);
+                    }
+                } else {
+                    String respStr = response.toString();
+                    String msg = "Neuspješna registracija";
+                    try {
+                        JSONObject err = new JSONObject(respStr);
+                        msg = err.optString("msg", err.optString("error_description", msg));
+                    } catch (Exception ignored) {
+                        if (respStr != null && !respStr.isEmpty()) msg = respStr;
+                    }
+                    postError(callback, msg);
+                }
+            } catch (Exception e) {
+                postError(callback, "Greška: " + e.getMessage());
+            }
+        });
+    }
+
     private void getUserProfile(String accessToken, AuthCallback callback) {
         executor.execute(() -> {
             try {
@@ -220,7 +347,7 @@ public class SupabaseClient {
                     String tableId = j.optString("id", userId);
                     student.setId(tableId);
                     saveStudentTableId(tableId);
-                    student.setEmail(j.optString("email", ""));
+                    student.setEmail(j.optString("mail", j.optString("email", "")));
                     student.setIme(j.getString("ime"));
                     student.setPrezime(j.getString("prezime"));
                     student.setBrojIndexa(j.optString("broj_indexa", ""));
@@ -1519,6 +1646,84 @@ public class SupabaseClient {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private String insertStudentProfile(String userId, String email, String ime, String prezime,
+                                        String brojIndexa, String studij, Integer godina, String accessToken) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return "Nedostaje user id (profile student)";
+        }
+        JSONObject payload = new JSONObject();
+        safePut(payload, "id", userId);
+        safePut(payload, "mail", safeStr(email)); // studenti table uses 'mail' like profesori
+        safePut(payload, "ime", safeStr(ime));
+        safePut(payload, "prezime", safeStr(prezime));
+        safePut(payload, "broj_indexa", safeStr(brojIndexa));
+        safePut(payload, "studij", safeStr(studij));
+        safePut(payload, "godina", godina != null ? godina : 1);
+
+        return insertProfile(STUDENTI_ENDPOINT, payload, accessToken);
+    }
+
+    private String insertProfessorProfile(String userId, String email, String ime, String prezime, String accessToken) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return "Nedostaje user id (profile profesor)";
+        }
+        JSONObject payload = new JSONObject();
+        safePut(payload, "id", userId);
+        safePut(payload, "mail", safeStr(email));
+        safePut(payload, "ime", safeStr(ime));
+        safePut(payload, "prezime", safeStr(prezime));
+        return insertProfile(PROFESORI_ENDPOINT, payload, accessToken);
+    }
+
+    private String safeStr(String value) {
+        return value == null ? "" : value;
+    }
+
+    private void safePut(JSONObject obj, String key, Object value) {
+        try {
+            obj.put(key, value == null ? JSONObject.NULL : value);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Posts the given JSON payload to a table endpoint using both apikey and session token.
+     * Returns null on success, otherwise an error message string.
+     */
+    private String insertProfile(String endpoint, JSONObject payload, String accessToken) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(endpoint);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+            conn.setRequestProperty("Prefer", "return=minimal");
+            conn.setDoOutput(true);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+            }
+
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                return null;
+            }
+
+            String err = "";
+            try (Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A")) {
+                err = s.hasNext() ? s.next() : "";
+            } catch (Exception ignored) {}
+
+            return "HTTP " + code + " " + err;
+        } catch (Exception e) {
+            return e.getMessage();
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     private Map<String, JSONObject> fetchStudentsByIds(Set<String> studentIds) {

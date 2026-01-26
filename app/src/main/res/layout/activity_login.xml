@@ -96,6 +96,18 @@
             android:layout_marginTop="16dp"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/tvRegisterLink"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/auth_register_link"
+            android:textColor="#1976D2"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:paddingTop="24dp"
+            android:paddingBottom="8dp"
+            android:clickable="true"
+            android:focusable="true" />
 
 
     </LinearLayout>

@@ -57,6 +57,11 @@
             android:exported="false"
             android:label="Izaberi QR Stil" />
 
+        <activity
+            android:name=".activity.RegisterActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

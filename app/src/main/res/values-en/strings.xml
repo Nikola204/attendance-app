@@ -80,4 +80,24 @@
     <string name="predavanje_students_title">Students</string>
     <string name="predavanje_students_empty">No students to show</string>
     <string name="predavanje_attendance_count">Attendances: %1$d</string>
+
+    <!-- Auth / Register -->
+    <string name="auth_register_link">Don’t have an account? Register</string>
+    <string name="register_title">Register</string>
+    <string name="register_button">Create account</string>
+    <string name="register_role_prompt">I am</string>
+    <string name="register_role_student">Student</string>
+    <string name="register_role_professor">Professor</string>
+    <string name="register_first_name">First name</string>
+    <string name="register_last_name">Last name</string>
+    <string name="register_email">Email (@fsre.sum.ba)</string>
+    <string name="register_password">Password</string>
+    <string name="register_password_confirm">Confirm password</string>
+    <string name="register_index_number">Index number</string>
+    <string name="register_study">Study</string>
+    <string name="register_year">Year of study</string>
+    <string name="error_required_field">This field is required</string>
+    <string name="error_password_match">Passwords must match</string>
+    <string name="error_email_domain">Email must be on fsre.sum.ba domain</string>
+    <string name="register_success">Account created successfully</string>
 </resources>

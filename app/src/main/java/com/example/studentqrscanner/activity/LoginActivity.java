@@ -22,6 +22,7 @@ public class LoginActivity extends BaseActivity {
 
     private EditText etEmail, etPassword;
     private Button btnLogin;
+    private View tvRegister;
     private ProgressBar progressBar;
     private SupabaseClient supabaseClient;
 
@@ -35,6 +36,7 @@ public class LoginActivity extends BaseActivity {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
+        tvRegister = findViewById(R.id.tvRegisterLink);
         progressBar = findViewById(R.id.progressBar);
 
         supabaseClient = new SupabaseClient(this);
@@ -45,6 +47,7 @@ public class LoginActivity extends BaseActivity {
         }
 
         btnLogin.setOnClickListener(v -> attemptLogin());
+        tvRegister.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
     }
 
     private void checkUserRoleAndNavigate() {
