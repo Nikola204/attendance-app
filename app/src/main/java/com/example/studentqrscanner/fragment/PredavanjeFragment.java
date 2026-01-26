@@ -1,5 +1,7 @@
 package com.example.studentqrscanner.fragment;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -11,26 +13,29 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
+import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
 import com.example.studentqrscanner.adapter.PredavanjeAdapter;
 import com.example.studentqrscanner.adapter.StudentAttendanceAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
+import com.example.studentqrscanner.util.CustomQrGenerator;
 import com.example.studentqrscanner.model.StudentAttendance;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -52,6 +57,40 @@ public class PredavanjeFragment extends Fragment {
     private final List<Predavanje> currentPredavanja = new ArrayList<>();
 
     private SupabaseClient supabaseClient;
+
+    // Permission launcher za kameru
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            isGranted -> {
+                if (isGranted) {
+                    // Permisija odobrena, pokreni scan
+                    startStudentScanInternal();
+                } else {
+                    // Permisija odbijena
+                    Toast.makeText(requireContext(), "Kamera permisija je potrebna za skeniranje QR koda", Toast.LENGTH_LONG).show();
+                    scanningStudent = false;
+                }
+            });
+
+    // Modern Activity Result API za skeniranje studenta
+    private final ActivityResultLauncher<ScanOptions> studentScanLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                scanningStudent = false;
+
+                // Debug: provjeri da li je scanner uopće pozvan
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Scanner vratio rezultat!", Toast.LENGTH_SHORT).show();
+                }
+
+                if (result.getContents() == null) {
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), "Skeniranje otkazano - nema sadržaja", Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    handleStudentScanResult(result.getContents());
+                }
+            });
 
     @Nullable
     @Override
@@ -281,27 +320,18 @@ public class PredavanjeFragment extends Fragment {
     }
 
     private Bitmap generateQrBitmap(String content) {
-        try {
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 500, 500);
+        if (!isAdded()) return null;
 
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        // Učitaj odabrani stil profesora iz preferences
+        CustomQrGenerator.QrStyle selectedStyle = QrStyleSelectorActivity.getSavedProfessorStyle(requireContext());
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
-                }
-            }
-
-            return bitmap;
-        } catch (WriterException e) {
-            if (isAdded()) {
-                Toast.makeText(requireContext(), "Greška pri generisanju QR koda.", Toast.LENGTH_SHORT).show();
-            }
-            return null;
-        }
+        // Generiši QR kod sa odabranim stilom
+        CustomQrGenerator generator = new CustomQrGenerator(requireContext());
+        return generator.generateStyledQr(
+                content,
+                selectedStyle,
+                "Skeniraj za prisustvo"
+        );
     }
 
     private void startStudentScan() {
@@ -312,27 +342,29 @@ public class PredavanjeFragment extends Fragment {
         }
         if (scanningStudent) return;
         scanningStudent = true;
-        IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt(getString(R.string.qr_fragment_prompt_student));
-        integrator.setBeepEnabled(true);
-        integrator.setOrientationLocked(true);
-        integrator.setCaptureActivity(PortraitCaptureActivity.class);
-        integrator.initiateScan();
+
+        // Provjeri da li imamo permisiju
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            // Imamo permisiju, pokreni scan
+            startStudentScanInternal();
+        } else {
+            // Traži permisiju
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable android.content.Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        if (result != null) {
-            scanningStudent = false;
-            if (result.getContents() != null) {
-                handleStudentScanResult(result.getContents());
-            } else if (isAdded()) {
-                Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
-            }
-        }
+    private void startStudentScanInternal() {
+        Toast.makeText(requireContext(), "Pokrećem scanner kamere...", Toast.LENGTH_SHORT).show();
+
+        ScanOptions options = new ScanOptions();
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+        options.setPrompt("Skeniraj QR studenta");
+        options.setBeepEnabled(true);
+        options.setOrientationLocked(true);
+        options.setCaptureActivity(PortraitCaptureActivity.class);
+
+        studentScanLauncher.launch(options);
     }
 
     private void handleStudentScanResult(String contents) {
@@ -341,6 +373,9 @@ public class PredavanjeFragment extends Fragment {
             Toast.makeText(requireContext(), "Nedostaje predavanje za evidenciju.", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        // Debug: prikaži što je skenirano
+        Toast.makeText(requireContext(), "Skenirano: " + contents, Toast.LENGTH_LONG).show();
 
         StudentScanData data = parseStudentScan(contents);
         if (data.studentId != null && !data.studentId.isEmpty()) {
@@ -424,9 +459,10 @@ public class PredavanjeFragment extends Fragment {
 
         String lower = raw.toLowerCase(Locale.US);
 
+        // Parsiranje studentId
         int idIndex = lower.indexOf("studentid=");
         if (idIndex >= 0) {
-            String idPart = raw.substring(idIndex + "studentId=".length());
+            String idPart = raw.substring(idIndex + "studentid=".length()); // FIX: koristi lowercase dužinu
             int ampIndex = idPart.indexOf("&");
             if (ampIndex >= 0) {
                 idPart = idPart.substring(0, ampIndex);
@@ -434,6 +470,7 @@ public class PredavanjeFragment extends Fragment {
             data.studentId = idPart.trim();
         }
 
+        // Parsiranje index
         int indexIndex = lower.indexOf("index=");
         if (indexIndex >= 0) {
             String idxPart = raw.substring(indexIndex + "index=".length());
@@ -443,7 +480,8 @@ public class PredavanjeFragment extends Fragment {
             }
             data.index = idxPart.trim();
         } else if (lower.contains("broj_indexa=")) {
-            String idxPart = raw.substring(lower.indexOf("broj_indexa=") + "broj_indexa=".length());
+            int brojIndexaIndex = lower.indexOf("broj_indexa=");
+            String idxPart = raw.substring(brojIndexaIndex + "broj_indexa=".length());
             int ampIndex = idxPart.indexOf("&");
             if (ampIndex >= 0) {
                 idxPart = idxPart.substring(0, ampIndex);

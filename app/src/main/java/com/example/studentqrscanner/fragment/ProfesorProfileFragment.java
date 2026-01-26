@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.LoginActivity;
+import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
 import com.example.studentqrscanner.adapter.KolegijAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
@@ -50,13 +51,19 @@ public class ProfesorProfileFragment extends Fragment {
         rvKolegiji = view.findViewById(R.id.rvKolegiji);
         rvKolegiji.setLayoutManager(new GridLayoutManager(requireContext(), 2));
 
+        Button btnChangeQrStyle = view.findViewById(R.id.btnChangeQrStyle);
+        btnChangeQrStyle.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), QrStyleSelectorActivity.class);
+            intent.putExtra("is_student", false); // Nije student = profesor
+            startActivity(intent);
+        });
+
         supabaseClient = new SupabaseClient(requireContext());
 
         if (!supabaseClient.isLoggedIn()) {
             navigateToLogin();
             return;
         }
-
 
         loadProfile();
         loadKolegiji();

@@ -44,7 +44,14 @@ public class KolegijAdapter extends RecyclerView.Adapter<KolegijAdapter.KolegijV
             fragment.setArguments(args);
 
             if (v.getContext() instanceof androidx.appcompat.app.AppCompatActivity) {
-                ((androidx.appcompat.app.AppCompatActivity) v.getContext()).getSupportFragmentManager()
+                androidx.appcompat.app.AppCompatActivity activity = (androidx.appcompat.app.AppCompatActivity) v.getContext();
+
+                // Ažuriraj naslov
+                if (activity instanceof com.example.studentqrscanner.activity.ProfesorHomeActivity) {
+                    ((com.example.studentqrscanner.activity.ProfesorHomeActivity) activity).setToolbarTitle(kolegij.getNaziv());
+                }
+
+                activity.getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.fragmentContainer, fragment)
                         .addToBackStack(null)

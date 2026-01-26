@@ -176,11 +176,23 @@
 
             <ImageView
                 android:id="@+id/ivQrCode"
-                android:layout_width="250dp"
-                android:layout_height="250dp"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
                 android:background="@android:color/white"
                 android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Student QR Code" />
                 android:contentDescription="@string/profile_qr_content_desc" />
+            <Button
+                android:id="@+id/btnShowQrStyles"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Promijeni Stil QR Koda"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="#1976D2" />
+
         </LinearLayout>
 
     </LinearLayout>

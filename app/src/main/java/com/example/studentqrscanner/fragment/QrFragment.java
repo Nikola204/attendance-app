@@ -1,6 +1,8 @@
 package com.example.studentqrscanner.fragment;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,9 +10,11 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.studentqrscanner.R;
@@ -18,8 +22,8 @@ import com.example.studentqrscanner.activity.LoginActivity;
 import com.example.studentqrscanner.activity.PortraitCaptureActivity;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.Predavanje;
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.util.Locale;
 
@@ -30,6 +34,34 @@ public class QrFragment extends Fragment {
 
     private boolean scanning = false;
     private boolean allowAutoStart = true;
+
+    // Permission launcher za kameru
+    private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            isGranted -> {
+                if (isGranted) {
+                    // Permisija odobrena, pokreni scan
+                    startScanInternal();
+                } else {
+                    // Permisija odbijena
+                    Toast.makeText(requireContext(), "Kamera permisija je potrebna za skeniranje QR koda", Toast.LENGTH_LONG).show();
+                    scanning = false;
+                }
+            });
+
+    // Modern Activity Result API
+    private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                scanning = false;
+                if (result.getContents() == null) {
+                    Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
+                    allowAutoStart = false;
+                } else {
+                    handleScanResult(result.getContents());
+                    allowAutoStart = false;
+                }
+            });
 
     @Nullable
     @Override
@@ -63,30 +95,29 @@ public class QrFragment extends Fragment {
     private void startScan() {
         if (scanning || !isAdded()) return;
         scanning = true;
-        IntentIntegrator integrator = IntentIntegrator.forSupportFragment(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt(getString(R.string.qr_fragment_prompt));
-        integrator.setCameraId(0);
-        integrator.setBeepEnabled(true);
-        integrator.setOrientationLocked(true); // keep portrait
-        integrator.setCaptureActivity(PortraitCaptureActivity.class);
-        integrator.setBarcodeImageEnabled(false);
-        integrator.initiateScan();
+
+        // Provjeri da li imamo permisiju
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            // Imamo permisiju, pokreni scan
+            startScanInternal();
+        } else {
+            // Traži permisiju
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        scanning = false;
-        allowAutoStart = false;
-        if (result != null) {
-            if (result.getContents() != null) {
-                handleScanResult(result.getContents());
-            } else {
-                Toast.makeText(requireContext(), "Skeniranje otkazano", Toast.LENGTH_SHORT).show();
-            }
-        }
+    private void startScanInternal() {
+        ScanOptions options = new ScanOptions();
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+        options.setPrompt("Skeniraj QR kod");
+        options.setCameraId(0);
+        options.setBeepEnabled(true);
+        options.setOrientationLocked(true);
+        options.setCaptureActivity(PortraitCaptureActivity.class);
+        options.setBarcodeImageEnabled(false);
+
+        barcodeLauncher.launch(options);
     }
 
     private void handleScanResult(String scanned) {

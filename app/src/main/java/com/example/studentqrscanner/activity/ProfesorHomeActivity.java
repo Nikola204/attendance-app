@@ -30,6 +30,7 @@ public class ProfesorHomeActivity extends BaseActivity {
     private ImageView iconAnalytics;
     private ImageView iconCreateLecture;
     private ImageView iconProfile;
+    private TextView tvTitle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,13 +43,25 @@ public class ProfesorHomeActivity extends BaseActivity {
             return;
         }
 
+        tvTitle = findViewById(R.id.textTitle);
+
         setupBottomNav();
         setupTopNavbar();
         applyInsetsPadding();
+        setupBackStackListener();
 
         if (savedInstanceState == null) {
             openTab(TAB_PROFILE);
         }
+    }
+
+    private void setupBackStackListener() {
+        getSupportFragmentManager().addOnBackStackChangedListener(() -> {
+            // Kada se back button klikne, vrati naslov na "Profil"
+            if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
+                updateTitle("Profil");
+            }
+        });
     }
 
     private void setupBottomNav() {
@@ -67,24 +80,43 @@ public class ProfesorHomeActivity extends BaseActivity {
 
     private void openTab(int tab) {
         Fragment fragment;
+        String title;
+
         switch (tab) {
             case TAB_ANALYTICS:
                 fragment = new AnalyticsFragment();
+                title = "Povijest evidencija";
                 break;
             case TAB_CREATE:
                 fragment = new CreateClassFragment();
+                title = "Novi kolegij";
                 break;
             case TAB_PROFILE:
             default:
                 fragment = new ProfesorProfileFragment();
+                title = "Profil";
                 break;
         }
 
         setSelectedTab(tab);
+        updateTitle(title);
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .commit();
+    }
+
+    private void updateTitle(String title) {
+        if (tvTitle != null) {
+            tvTitle.setText(title);
+        }
+    }
+
+    /**
+     * Javna metoda za fragmentima da mogu ažurirati naslov
+     */
+    public void setToolbarTitle(String title) {
+        updateTitle(title);
     }
 
     private void setSelectedTab(int tab) {

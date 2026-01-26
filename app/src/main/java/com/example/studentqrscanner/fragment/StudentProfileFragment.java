@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -21,15 +22,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.studentqrscanner.R;
 import com.example.studentqrscanner.activity.LoginActivity;
+import com.example.studentqrscanner.activity.QrStyleSelectorActivity;
 import com.example.studentqrscanner.adapter.StudentKolegijiAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.Kolegij;
 import com.example.studentqrscanner.model.Student;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
+import com.example.studentqrscanner.util.CustomQrGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +52,7 @@ public class StudentProfileFragment extends Fragment {
     private String currentStudentId;
 
     private SupabaseClient supabaseClient;
+    private Student currentStudent; // Čuvamo trenutnog studenta za refresh
 
     @Nullable
     @Override
@@ -76,6 +76,13 @@ public class StudentProfileFragment extends Fragment {
         tvNoKolegiji = view.findViewById(R.id.tvNoKolegiji);
         btnAddKolegij = view.findViewById(R.id.btnAddKolegij);
 
+        Button btnShowQrStyles = view.findViewById(R.id.btnShowQrStyles);
+        btnShowQrStyles.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), QrStyleSelectorActivity.class);
+            intent.putExtra("is_student", true);
+            startActivity(intent);
+        });
+
         supabaseClient = new SupabaseClient(requireContext());
 
         if (!supabaseClient.isLoggedIn()) {
@@ -85,6 +92,15 @@ public class StudentProfileFragment extends Fragment {
 
         setupKolegijiList();
         loadProfile();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Osvježi QR kod ako se korisnik vratio iz style selector-a
+        if (currentStudent != null) {
+            generateQrCode(currentStudent);
+        }
     }
 
     private void setupKolegijiList() {
@@ -277,7 +293,7 @@ public class StudentProfileFragment extends Fragment {
     }
 
     /**
-     * Generiranje QR koda na osnovu imena i broja indexa
+     * Generiranje custom QR koda sa odabranim stilom za studenta
      */
     private void generateQrCode(Student student) {
         if (student == null || student.getFullName() == null || student.getFullName().isEmpty()
@@ -287,28 +303,21 @@ public class StudentProfileFragment extends Fragment {
             return;
         }
 
-        String qrContent = "studentId=" + student.getId()
-                + "&index=" + student.getBrojIndexa()
-                + "&name=" + student.getFullName();
+        // Učitaj odabrani stil iz preferences
+        CustomQrGenerator.QrStyle selectedStyle = QrStyleSelectorActivity.getSavedStudentStyle(requireContext());
 
-        try {
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, 500, 500);
+        // Generiši QR kod sa odabranim stilom
+        String content = "studentId=" + student.getId() +
+                "&index=" + student.getBrojIndexa() +
+                "&name=" + student.getFullName();
 
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+        CustomQrGenerator generator = new CustomQrGenerator(requireContext());
+        Bitmap qrBitmap = generator.generateStyledQr(content, selectedStyle, "Student: " + student.getBrojIndexa());
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bitmap.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
-                }
-            }
-
-            ivQrCode.setImageBitmap(bitmap);
-        } catch (WriterException e) {
+        if (qrBitmap != null) {
+            ivQrCode.setImageBitmap(qrBitmap);
+        } else {
             Toast.makeText(requireContext(), "Greška pri generisanju QR koda", Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
         }
     }
 }
