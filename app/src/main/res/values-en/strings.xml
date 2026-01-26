@@ -18,6 +18,10 @@
     <string name="logout">Logout</string>
     <string name="menu_description">Options</string>
     <string name="predavanja_empty">No lectures to show</string>
+    <string name="nav_title_profile">Profile</string>
+    <string name="nav_title_analytics">Attendance history</string>
+    <string name="nav_title_scan_qr">Scan QR code</string>
+    <string name="nav_title_create_course">New course</string>
     <string name="profile_full_name">Full name</string>
     <string name="profile_index_label">Index number</string>
     <string name="profile_study_label">Study</string>

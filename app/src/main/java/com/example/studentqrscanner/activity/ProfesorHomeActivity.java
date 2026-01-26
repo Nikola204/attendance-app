@@ -2,14 +2,11 @@ package com.example.studentqrscanner.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -25,17 +22,23 @@ public class ProfesorHomeActivity extends BaseActivity {
     private static final int TAB_ANALYTICS = 0;
     private static final int TAB_CREATE = 1;
     private static final int TAB_PROFILE = 2;
+    private static final String KEY_CURRENT_TAB = "current_tab";
 
     private SupabaseClient supabaseClient;
     private ImageView iconAnalytics;
     private ImageView iconCreateLecture;
     private ImageView iconProfile;
     private TextView tvTitle;
+    private int currentTab = TAB_PROFILE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profesor_home);
+
+        if (savedInstanceState != null) {
+            currentTab = savedInstanceState.getInt(KEY_CURRENT_TAB, TAB_PROFILE);
+        }
 
         supabaseClient = new SupabaseClient(this);
         if (!supabaseClient.isLoggedIn()) {
@@ -51,7 +54,10 @@ public class ProfesorHomeActivity extends BaseActivity {
         setupBackStackListener();
 
         if (savedInstanceState == null) {
-            openTab(TAB_PROFILE);
+            openTab(currentTab);
+        } else {
+            setSelectedTab(currentTab);
+            updateTitle(getTitleForTab(currentTab));
         }
     }
 
@@ -59,7 +65,8 @@ public class ProfesorHomeActivity extends BaseActivity {
         getSupportFragmentManager().addOnBackStackChangedListener(() -> {
             // Kada se back button klikne, vrati naslov na "Profil"
             if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
-                updateTitle("Profil");
+                updateTitle(getString(R.string.nav_title_profile));
+                currentTab = TAB_PROFILE;
             }
         });
     }
@@ -85,19 +92,20 @@ public class ProfesorHomeActivity extends BaseActivity {
         switch (tab) {
             case TAB_ANALYTICS:
                 fragment = new AnalyticsFragment();
-                title = "Povijest evidencija";
+                title = getString(R.string.nav_title_analytics);
                 break;
             case TAB_CREATE:
                 fragment = new CreateClassFragment();
-                title = "Novi kolegij";
+                title = getString(R.string.nav_title_create_course);
                 break;
             case TAB_PROFILE:
             default:
                 fragment = new ProfesorProfileFragment();
-                title = "Profil";
+                title = getString(R.string.nav_title_profile);
                 break;
         }
 
+        currentTab = tab;
         setSelectedTab(tab);
         updateTitle(title);
         getSupportFragmentManager()
@@ -117,6 +125,18 @@ public class ProfesorHomeActivity extends BaseActivity {
      */
     public void setToolbarTitle(String title) {
         updateTitle(title);
+    }
+
+    private String getTitleForTab(int tab) {
+        switch (tab) {
+            case TAB_ANALYTICS:
+                return getString(R.string.nav_title_analytics);
+            case TAB_CREATE:
+                return getString(R.string.nav_title_create_course);
+            case TAB_PROFILE:
+            default:
+                return getString(R.string.nav_title_profile);
+        }
     }
 
     private void setSelectedTab(int tab) {
@@ -175,5 +195,11 @@ public class ProfesorHomeActivity extends BaseActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(KEY_CURRENT_TAB, currentTab);
     }
 }

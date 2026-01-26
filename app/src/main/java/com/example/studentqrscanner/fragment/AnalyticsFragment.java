@@ -78,7 +78,15 @@ public class AnalyticsFragment extends Fragment {
         if (isStudent) {
             supabaseClient.getEvidencijeForStudent(studentId, callback);
         } else {
-            supabaseClient.getAllEvidencije(callback);
+            String profesorId = supabaseClient.getCurrentUserId();
+            if (profesorId == null || profesorId.trim().isEmpty()) {
+                Toast.makeText(requireContext(), "Greška: profesor nije prijavljen.", Toast.LENGTH_LONG).show();
+                if (emptyView != null) {
+                    emptyView.setVisibility(View.VISIBLE);
+                }
+                return;
+            }
+            supabaseClient.getEvidencijeForProfesor(profesorId, callback);
         }
     }
 

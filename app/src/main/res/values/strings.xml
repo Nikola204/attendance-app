@@ -18,6 +18,10 @@
     <string name="logout">Odjavi se</string>
     <string name="menu_description">Opcije</string>
     <string name="predavanja_empty">Nema predavanja za prikaz</string>
+    <string name="nav_title_profile">Profil</string>
+    <string name="nav_title_analytics">Povijest evidencija</string>
+    <string name="nav_title_scan_qr">Skeniraj QR kod</string>
+    <string name="nav_title_create_course">Novi kolegij</string>
 
     <!-- Profile -->
     <string name="profile_full_name">Ime i prezime</string>
