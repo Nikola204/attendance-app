@@ -66,7 +66,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/predavanje_students_title"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/accent_blue"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp" />
