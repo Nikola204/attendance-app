@@ -62,6 +62,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".activity.DeleteAccountActivity"
+            android:exported="false"
+            android:label="Brisanje Računa" />
+
     </application>
 
 </manifest>

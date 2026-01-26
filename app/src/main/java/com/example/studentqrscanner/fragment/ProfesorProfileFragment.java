@@ -32,6 +32,7 @@ public class ProfesorProfileFragment extends Fragment {
     private TextView tvProfesorLastName;
     private ProgressBar progressBar;
     private SupabaseClient supabaseClient;
+    private Profesor currentProfesor; // Added field
 
     private RecyclerView rvKolegiji;
     private KolegijAdapter adapter;
@@ -58,6 +59,19 @@ public class ProfesorProfileFragment extends Fragment {
             startActivity(intent);
         });
 
+        Button btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+        btnDeleteAccount.setOnClickListener(v -> {
+            if (currentProfesor == null) {
+                Toast.makeText(getContext(), "Podaci nisu učitani", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent intent = new Intent(requireContext(), com.example.studentqrscanner.activity.DeleteAccountActivity.class);
+            intent.putExtra("USER_EMAIL", currentProfesor.getEmail());
+            intent.putExtra("USER_ID", supabaseClient.getCurrentUserId()); // or safely from object
+            intent.putExtra("IS_STUDENT", false);
+            startActivity(intent);
+        });
+
         supabaseClient = new SupabaseClient(requireContext());
 
         if (!supabaseClient.isLoggedIn()) {
@@ -78,6 +92,7 @@ public class ProfesorProfileFragment extends Fragment {
                 showLoading(false);
                 if (user instanceof Profesor) {
                     Profesor profesor = (Profesor) user;
+                    currentProfesor = profesor; // Save for later use
                     tvProfesorLastName.setText(profesor.getPrezime());
                 } else {
                     Toast.makeText(requireContext(), "Profil nije dostupan.", Toast.LENGTH_LONG).show();

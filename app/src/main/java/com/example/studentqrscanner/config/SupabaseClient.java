@@ -779,6 +779,35 @@ public class SupabaseClient {
         });
     }
 
+    public void deleteAccount(String userId, boolean isStudent, SimpleCallback callback) {
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                String endpoint = isStudent ? STUDENTI_ENDPOINT : PROFESORI_ENDPOINT;
+                URL url = new URL(endpoint + "?id=eq." + userId);
+                
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("DELETE");
+                conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+                
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    mainHandler.post(callback::onSuccess);
+                } else {
+                    Scanner s = new Scanner(conn.getErrorStream()).useDelimiter("\\A");
+                    String err = s.hasNext() ? s.next() : "Nepoznata greska";
+                    mainHandler.post(() -> callback.onError("Greška " + code + ": " + err));
+                }
+            } catch (Exception e) {
+                mainHandler.post(() -> callback.onError("Sustav: " + e.getMessage()));
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
     public void addEvidencijaZaStudenta(String predavanjeId, String studentId, SimpleCallback callback) {
         Handler mainHandler = new Handler(Looper.getMainLooper());
 

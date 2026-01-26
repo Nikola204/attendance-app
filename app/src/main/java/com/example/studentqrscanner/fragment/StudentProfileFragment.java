@@ -83,6 +83,19 @@ public class StudentProfileFragment extends Fragment {
             startActivity(intent);
         });
 
+        Button btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+        btnDeleteAccount.setOnClickListener(v -> {
+            if (currentStudent == null) {
+                Toast.makeText(getContext(), "Podaci nisu učitani", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent intent = new Intent(requireContext(), com.example.studentqrscanner.activity.DeleteAccountActivity.class);
+            intent.putExtra("USER_EMAIL", currentStudent.getEmail());
+            intent.putExtra("USER_ID", currentStudent.getId());
+            intent.putExtra("IS_STUDENT", true);
+            startActivity(intent);
+        });
+
         supabaseClient = new SupabaseClient(requireContext());
 
         if (!supabaseClient.isLoggedIn()) {
