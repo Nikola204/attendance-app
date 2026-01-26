@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/rounded_dialog_bg">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/attendees_title"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="12dp"
+        android:gravity="center_horizontal"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvAttendees"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:scrollbars="vertical" />
+
+    <TextView
+        android:id="@+id/tvNoAttendees"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/attendees_empty"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone"
+        android:textColor="@color/text_secondary"/>
+
+    <Button
+        android:id="@+id/btnCloseAttendees"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/attendees_close"
+        android:layout_marginTop="8dp"
+        android:backgroundTint="#CCCCCC"
+        android:textColor="@color/text_primary"/>
+
+</LinearLayout>

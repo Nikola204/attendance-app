@@ -14,7 +14,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -162,38 +161,22 @@ public class QrFragment extends Fragment {
             public void onSuccess(Predavanje predavanje) {
                 if (!isAdded()) return;
                 String naziv = predavanje.getNaslov() != null ? predavanje.getNaslov() : "Predavanje";
-                tvLastResult.setText("Predavanje: " + naziv);
-                showAttendanceDialog(predavanje);
+                tvLastResult.setText(getString(R.string.qr_fragment_found, naziv));
+                potvrdiDolazak(predavanje.getId(), true);
             }
 
             @Override
             public void onError(String error) {
                 if (!isAdded()) return;
-                tvLastResult.setText("Greška: " + error);
+                tvLastResult.setText(getString(R.string.qr_fragment_error, error));
                 Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
+                allowAutoStart = true;
+                startScan();
             }
         });
     }
 
-    private void showAttendanceDialog(Predavanje predavanje) {
-        if (!isAdded()) return;
-
-        String naziv = predavanje.getNaslov() != null ? predavanje.getNaslov() : "Predavanje";
-        String datum = predavanje.getDatum() != null ? predavanje.getDatum() : "";
-        String message = datum.isEmpty() ? "Zelite li evidentirati dolazak?" : "Evidentirati dolazak za datum: " + datum;
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle(naziv)
-                .setMessage(message)
-                .setPositiveButton("OK", (dialog, which) -> potvrdiDolazak(predavanje.getId()))
-                .setNegativeButton("Ponovo skeniraj", (dialog, which) -> {
-                    allowAutoStart = true;
-                    startScan();
-                })
-                .show();
-    }
-
-    private void potvrdiDolazak(String predavanjeId) {
+    private void potvrdiDolazak(String predavanjeId, boolean rescanAfter) {
         if (!isAdded()) return;
         if (predavanjeId == null || predavanjeId.trim().isEmpty()) {
             Toast.makeText(requireContext(), "Nedostaje ID predavanja", Toast.LENGTH_SHORT).show();
@@ -205,12 +188,20 @@ public class QrFragment extends Fragment {
             public void onSuccess() {
                 if (!isAdded()) return;
                 Toast.makeText(requireContext(), "Dolazak evidentiran", Toast.LENGTH_LONG).show();
+                if (rescanAfter) {
+                    allowAutoStart = true;
+                    startScan();
+                }
             }
 
             @Override
             public void onError(String error) {
                 if (!isAdded()) return;
                 Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+                if (rescanAfter) {
+                    allowAutoStart = true;
+                    startScan();
+                }
             }
         });
     }

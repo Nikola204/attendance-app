@@ -20,7 +20,6 @@ import com.example.studentqrscanner.adapter.AttendanceAdapter;
 import com.example.studentqrscanner.config.SupabaseClient;
 import com.example.studentqrscanner.model.AttendanceRecord;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class AnalyticsFragment extends Fragment {
@@ -50,22 +49,37 @@ public class AnalyticsFragment extends Fragment {
     private void setupRecyclerView(View view) {
         RecyclerView recyclerView = view.findViewById(R.id.recyclerViewHistory);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        View emptyView = view.findViewById(R.id.tvNoAttendance);
 
-        List<AttendanceRecord> records = getDummyRecords();
-        AttendanceAdapter adapter = new AttendanceAdapter(records);
-        recyclerView.setAdapter(adapter);
-    }
+        String studentId = supabaseClient.getStudentTableId();
+        boolean isStudent = studentId != null && !studentId.trim().isEmpty();
 
-    private List<AttendanceRecord> getDummyRecords() {
-        List<AttendanceRecord> list = new ArrayList<>();
-        list.add(new AttendanceRecord("Matematika 1", "12", "NOV", "10:00", "D204", true));
-        list.add(new AttendanceRecord("Fizika", "11", "NOV", "08:00", "A101", true));
-        list.add(new AttendanceRecord("Programiranje 1", "10", "NOV", "12:00", "L102", false));
-        list.add(new AttendanceRecord("Engleski Jezik", "09", "NOV", "14:00", "B303", true));
-        list.add(new AttendanceRecord("Baze Podataka", "08", "NOV", "09:00", "L201", true));
-        list.add(new AttendanceRecord("Matematika 1", "05", "NOV", "10:00", "D204", false));
-        list.add(new AttendanceRecord("Fizika", "04", "NOV", "08:00", "A101", true));
-        return list;
+        SupabaseClient.AttendanceRecordsCallback callback = new SupabaseClient.AttendanceRecordsCallback() {
+            @Override
+            public void onSuccess(List<AttendanceRecord> records) {
+                if (!isAdded()) return;
+                AttendanceAdapter adapter = new AttendanceAdapter(records);
+                recyclerView.setAdapter(adapter);
+                if (emptyView != null) {
+                    emptyView.setVisibility(records == null || records.isEmpty() ? View.VISIBLE : View.GONE);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Greška: " + error, Toast.LENGTH_LONG).show();
+                if (emptyView != null) {
+                    emptyView.setVisibility(View.VISIBLE);
+                }
+            }
+        };
+
+        if (isStudent) {
+            supabaseClient.getEvidencijeForStudent(studentId, callback);
+        } else {
+            supabaseClient.getAllEvidencije(callback);
+        }
     }
 
     private void navigateToLogin() {

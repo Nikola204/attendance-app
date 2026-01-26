@@ -18,7 +18,7 @@ import com.example.studentqrscanner.model.BaseUser;
 import com.example.studentqrscanner.model.UserRole;
 import com.example.studentqrscanner.model.Profesor;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private EditText etEmail, etPassword;
     private Button btnLogin;
@@ -108,7 +108,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onError(String error) {
                 showLoading(false);
-                Toast.makeText(LoginActivity.this, "Greska: " + error, Toast.LENGTH_LONG).show();
+                Toast.makeText(LoginActivity.this, "Greška: " + error, Toast.LENGTH_LONG).show();
             }
         });
     }

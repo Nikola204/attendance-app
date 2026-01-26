@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="24dp"
-    android:background="#F5F5F5"
+    android:background="@color/background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -13,31 +13,40 @@
         android:gravity="center_horizontal"
         android:paddingBottom="24dp">
 
+        <ProgressBar
+            android:id="@+id/progressBarProfile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone"
+            style="?android:attr/progressBarStyleLarge" />
+
         <TextView
             android:id="@+id/tvFullName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Ime Prezime"
+            android:text="@string/profile_full_name"
             android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="#1976D2"
+            android:textColor="@color/accent_blue"
             android:layout_marginBottom="16dp" />
 
         <LinearLayout
+            android:id="@+id/cardInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:background="@android:color/white"
+            android:background="@color/surface"
             android:elevation="2dp"
             android:layout_marginBottom="16dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Broj indexa"
+                android:text="@string/profile_index_label"
                 android:textStyle="bold"
-                android:textColor="#444444" />
+                android:textColor="@color/text_primary" />
 
             <TextView
                 android:id="@+id/tvBrojIndexa"
@@ -45,15 +54,15 @@
                 android:layout_height="wrap_content"
                 android:text="RN1234"
                 android:textSize="16sp"
-                android:textColor="#222222"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Studij"
+                android:text="@string/profile_study_label"
                 android:textStyle="bold"
-                android:textColor="#444444" />
+                android:textColor="@color/text_primary" />
 
             <TextView
                 android:id="@+id/tvStudij"
@@ -61,15 +70,15 @@
                 android:layout_height="wrap_content"
                 android:text="Racunarstvo"
                 android:textSize="16sp"
-                android:textColor="#222222"
+                android:textColor="@color/text_primary"
                 android:layout_marginBottom="12dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Godina"
+                android:text="@string/profile_year_label"
                 android:textStyle="bold"
-                android:textColor="#444444" />
+                android:textColor="@color/text_primary" />
 
             <TextView
                 android:id="@+id/tvGodina"
@@ -77,16 +86,72 @@
                 android:layout_height="wrap_content"
                 android:text="1"
                 android:textSize="16sp"
-                android:textColor="#222222" />
+                android:textColor="@color/text_primary" />
         </LinearLayout>
 
-        <!-- QR Code Section -->
         <LinearLayout
+            android:id="@+id/cardKolegiji"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:background="@android:color/white"
+            android:background="@color/surface"
+            android:elevation="2dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/profile_my_courses"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:textColor="@color/accent_blue" />
+
+                <ImageButton
+                    android:id="@+id/btnAddKolegij"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@android:drawable/ic_input_add"
+                    android:tint="@color/accent_blue"
+                    android:contentDescription="@string/profile_add_course" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvNoKolegiji"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_no_courses"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:padding="8dp"
+                android:visibility="gone"
+                android:layout_marginTop="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvKolegiji"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/cardQr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@color/surface"
             android:elevation="2dp"
             android:gravity="center_horizontal"
             android:layout_marginBottom="16dp">
@@ -94,18 +159,18 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Moj QR Kod"
+                android:text="@string/profile_qr_title"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#1976D2"
+                android:textColor="@color/accent_blue"
                 android:layout_marginBottom="12dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Prikaži ovaj QR kod profesoru za evidentiranje prisustva"
+                android:text="@string/profile_qr_subtitle"
                 android:textSize="14sp"
-                android:textColor="#666666"
+                android:textColor="@color/text_secondary"
                 android:gravity="center"
                 android:layout_marginBottom="16dp" />
 
@@ -117,7 +182,7 @@
                 android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Student QR Code" />
-
+                android:contentDescription="@string/profile_qr_content_desc" />
             <Button
                 android:id="@+id/btnShowQrStyles"
                 android:layout_width="wrap_content"
@@ -127,15 +192,8 @@
                 android:textColor="#FFFFFF"
                 android:layout_marginTop="12dp"
                 android:backgroundTint="#1976D2" />
+
         </LinearLayout>
-
-        <ProgressBar
-            android:id="@+id/progressBarProfile"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            style="?android:attr/progressBarStyleLarge" />
-
 
     </LinearLayout>
 </ScrollView>

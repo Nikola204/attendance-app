@@ -19,7 +19,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.StudentQRScanner"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:name=".StudentQRApp">
 
         <activity
             android:name=".activity.LoginActivity"
@@ -37,6 +38,10 @@
 
         <activity
             android:name=".activity.ProfesorHomeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".activity.SettingsActivity"
             android:exported="false" />
 
         <!-- ZXing capture activity locked to portrait -->

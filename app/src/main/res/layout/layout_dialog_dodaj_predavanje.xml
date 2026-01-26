@@ -19,7 +19,7 @@
         android:text="Novo Predavanje"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#1976D2"
+        android:textColor="@color/accent_blue"
         android:layout_marginBottom="20dp"/>
 
     <EditText
@@ -28,7 +28,9 @@
         android:layout_height="wrap_content"
         android:hint="Naslov predavanja"
         android:inputType="text"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"/>
 
     <EditText
         android:id="@+id/etOpis"
@@ -36,14 +38,18 @@
         android:layout_height="wrap_content"
         android:hint="Opis (npr. poglavlje)"
         android:inputType="textMultiLine"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"/>
 
     <EditText
         android:id="@+id/etUcionica"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Učionica"
-        android:layout_marginBottom="12dp"/>
+        android:hint="U?ionica"
+        android:layout_marginBottom="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"/>
 
     <EditText
         android:id="@+id/etDatum"
@@ -52,14 +58,16 @@
         android:hint="Datum i vrijeme"
         android:focusable="false"
         android:clickable="true"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="24dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"/>
 
     <Button
         android:id="@+id/btnSpremiPredavanje"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Dodaj predavanje"
-        android:backgroundTint="#1976D2"
-        android:textColor="#FFFFFF" />
+        android:backgroundTint="@color/accent_blue"
+        android:textColor="@color/white" />
 
 </LinearLayout>
